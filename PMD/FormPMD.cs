@@ -13,7 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace KTH {
+namespace PMD {
     public partial class FormPMD : Form {
 
         //private const string EVC2_PNPID = "USB\\VID_0483&PID_5740&MI_01";

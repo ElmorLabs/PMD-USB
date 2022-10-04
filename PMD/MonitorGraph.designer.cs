@@ -1,4 +1,4 @@
-﻿namespace KTH {
+﻿namespace PMD {
     partial class MonitorGraph {
         /// <summary> 
         /// Required designer variable.

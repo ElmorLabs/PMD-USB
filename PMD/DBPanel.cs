@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace KTH {
+namespace PMD {
 	public class DBPanel : System.Windows.Forms.Panel {
 		public DBPanel() {
             this.SetStyle(

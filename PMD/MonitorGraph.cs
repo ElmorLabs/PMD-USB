@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.Diagnostics;
 
-namespace KTH {
+namespace PMD {
     public partial class MonitorGraph : UserControl {
 
         public DBPanel panel1;

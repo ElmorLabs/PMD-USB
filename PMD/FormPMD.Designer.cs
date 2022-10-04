@@ -1,4 +1,4 @@
-﻿namespace KTH {
+﻿namespace PMD {
     partial class FormPMD {
         /// <summary>
         /// Required designer variable.

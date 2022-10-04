@@ -7,7 +7,7 @@ using System.IO;
 using System.Globalization;
 using System.Windows.Forms;
 
-namespace KTH {
+namespace PMD {
     public class LoggingItem {
 
         public int Id;
