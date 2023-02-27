@@ -25,12 +25,21 @@
         private void InitializeComponent() {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormPMD));
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
+            this.label10 = new System.Windows.Forms.Label();
+            this.textBoxTimeoutDelay = new System.Windows.Forms.TextBox();
             this.comboBoxOled = new System.Windows.Forms.ComboBox();
-            this.labelDisplayupdate = new System.Windows.Forms.Label();
             this.labelAof = new System.Windows.Forms.Label();
+            this.label7 = new System.Windows.Forms.Label();
+            this.labelDisplayupdate = new System.Windows.Forms.Label();
+            this.comboBoxTimeoutAction = new System.Windows.Forms.ComboBox();
+            this.label8 = new System.Windows.Forms.Label();
+            this.comboBoxDisplaySpeed = new System.Windows.Forms.ComboBox();
+            this.label9 = new System.Windows.Forms.Label();
+            this.comboBoxAveraging = new System.Windows.Forms.ComboBox();
+            this.buttonApplyConfig = new System.Windows.Forms.Button();
+            this.comboBoxOledRotation = new System.Windows.Forms.ComboBox();
             this.buttonReset = new System.Windows.Forms.Button();
             this.buttonBootloader = new System.Windows.Forms.Button();
-            this.buttonApplyConfig = new System.Windows.Forms.Button();
             this.buttonStorecfg = new System.Windows.Forms.Button();
             this.tableLayoutPanel3 = new System.Windows.Forms.TableLayoutPanel();
             this.labelFwVer = new System.Windows.Forms.Label();
@@ -56,15 +65,6 @@
             this.textBoxPcie2Voffset = new System.Windows.Forms.TextBox();
             this.textBoxEps1Voffset = new System.Windows.Forms.TextBox();
             this.textBoxEps2Voffset = new System.Windows.Forms.TextBox();
-            this.label7 = new System.Windows.Forms.Label();
-            this.comboBoxTimeoutAction = new System.Windows.Forms.ComboBox();
-            this.label8 = new System.Windows.Forms.Label();
-            this.comboBoxDisplaySpeed = new System.Windows.Forms.ComboBox();
-            this.label9 = new System.Windows.Forms.Label();
-            this.comboBoxAveraging = new System.Windows.Forms.ComboBox();
-            this.textBoxTimeoutDelay = new System.Windows.Forms.TextBox();
-            this.label10 = new System.Windows.Forms.Label();
-            this.comboBoxOledRotation = new System.Windows.Forms.ComboBox();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel3.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
@@ -101,6 +101,23 @@
             this.tableLayoutPanel1.Size = new System.Drawing.Size(176, 178);
             this.tableLayoutPanel1.TabIndex = 1;
             // 
+            // label10
+            // 
+            this.label10.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.label10.AutoSize = true;
+            this.label10.Location = new System.Drawing.Point(3, 81);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(79, 13);
+            this.label10.TabIndex = 24;
+            this.label10.Text = "OLED Rotation";
+            // 
+            // textBoxTimeoutDelay
+            // 
+            this.textBoxTimeoutDelay.Location = new System.Drawing.Point(88, 28);
+            this.textBoxTimeoutDelay.Name = "textBoxTimeoutDelay";
+            this.textBoxTimeoutDelay.Size = new System.Drawing.Size(85, 20);
+            this.textBoxTimeoutDelay.TabIndex = 23;
+            // 
             // comboBoxOled
             // 
             this.comboBoxOled.Anchor = System.Windows.Forms.AnchorStyles.Right;
@@ -109,6 +126,26 @@
             this.comboBoxOled.Name = "comboBoxOled";
             this.comboBoxOled.Size = new System.Drawing.Size(85, 21);
             this.comboBoxOled.TabIndex = 8;
+            // 
+            // labelAof
+            // 
+            this.labelAof.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.labelAof.AutoSize = true;
+            this.labelAof.Location = new System.Drawing.Point(3, 31);
+            this.labelAof.Name = "labelAof";
+            this.labelAof.Size = new System.Drawing.Size(75, 13);
+            this.labelAof.TabIndex = 0;
+            this.labelAof.Text = "Timeout Delay";
+            // 
+            // label7
+            // 
+            this.label7.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(3, 6);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(78, 13);
+            this.label7.TabIndex = 9;
+            this.label7.Text = "Timeout Action";
             // 
             // labelDisplayupdate
             // 
@@ -120,15 +157,72 @@
             this.labelDisplayupdate.TabIndex = 7;
             this.labelDisplayupdate.Text = "OLED Speed";
             // 
-            // labelAof
+            // comboBoxTimeoutAction
             // 
-            this.labelAof.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.labelAof.AutoSize = true;
-            this.labelAof.Location = new System.Drawing.Point(3, 31);
-            this.labelAof.Name = "labelAof";
-            this.labelAof.Size = new System.Drawing.Size(75, 13);
-            this.labelAof.TabIndex = 0;
-            this.labelAof.Text = "Timeout Delay";
+            this.comboBoxTimeoutAction.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.comboBoxTimeoutAction.FormattingEnabled = true;
+            this.comboBoxTimeoutAction.Location = new System.Drawing.Point(88, 3);
+            this.comboBoxTimeoutAction.Name = "comboBoxTimeoutAction";
+            this.comboBoxTimeoutAction.Size = new System.Drawing.Size(85, 21);
+            this.comboBoxTimeoutAction.TabIndex = 10;
+            // 
+            // label8
+            // 
+            this.label8.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.label8.AutoSize = true;
+            this.label8.Location = new System.Drawing.Point(3, 56);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(36, 13);
+            this.label8.TabIndex = 11;
+            this.label8.Text = "OLED";
+            // 
+            // comboBoxDisplaySpeed
+            // 
+            this.comboBoxDisplaySpeed.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.comboBoxDisplaySpeed.FormattingEnabled = true;
+            this.comboBoxDisplaySpeed.Location = new System.Drawing.Point(88, 103);
+            this.comboBoxDisplaySpeed.Name = "comboBoxDisplaySpeed";
+            this.comboBoxDisplaySpeed.Size = new System.Drawing.Size(85, 21);
+            this.comboBoxDisplaySpeed.TabIndex = 12;
+            // 
+            // label9
+            // 
+            this.label9.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.label9.AutoSize = true;
+            this.label9.Location = new System.Drawing.Point(3, 131);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(55, 13);
+            this.label9.TabIndex = 13;
+            this.label9.Text = "Averaging";
+            // 
+            // comboBoxAveraging
+            // 
+            this.comboBoxAveraging.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.comboBoxAveraging.FormattingEnabled = true;
+            this.comboBoxAveraging.Location = new System.Drawing.Point(88, 128);
+            this.comboBoxAveraging.Name = "comboBoxAveraging";
+            this.comboBoxAveraging.Size = new System.Drawing.Size(85, 21);
+            this.comboBoxAveraging.TabIndex = 14;
+            // 
+            // buttonApplyConfig
+            // 
+            this.buttonApplyConfig.Enabled = false;
+            this.buttonApplyConfig.Location = new System.Drawing.Point(88, 153);
+            this.buttonApplyConfig.Name = "buttonApplyConfig";
+            this.buttonApplyConfig.Size = new System.Drawing.Size(85, 22);
+            this.buttonApplyConfig.TabIndex = 6;
+            this.buttonApplyConfig.Text = "Apply";
+            this.buttonApplyConfig.UseVisualStyleBackColor = true;
+            this.buttonApplyConfig.Click += new System.EventHandler(this.buttonApply_Click);
+            // 
+            // comboBoxOledRotation
+            // 
+            this.comboBoxOledRotation.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.comboBoxOledRotation.FormattingEnabled = true;
+            this.comboBoxOledRotation.Location = new System.Drawing.Point(88, 78);
+            this.comboBoxOledRotation.Name = "comboBoxOledRotation";
+            this.comboBoxOledRotation.Size = new System.Drawing.Size(85, 21);
+            this.comboBoxOledRotation.TabIndex = 25;
             // 
             // buttonReset
             // 
@@ -149,17 +243,6 @@
             this.buttonBootloader.Text = "Bootloader";
             this.buttonBootloader.UseVisualStyleBackColor = true;
             this.buttonBootloader.Click += new System.EventHandler(this.buttonBootloader_Click);
-            // 
-            // buttonApplyConfig
-            // 
-            this.buttonApplyConfig.Enabled = false;
-            this.buttonApplyConfig.Location = new System.Drawing.Point(88, 153);
-            this.buttonApplyConfig.Name = "buttonApplyConfig";
-            this.buttonApplyConfig.Size = new System.Drawing.Size(85, 22);
-            this.buttonApplyConfig.TabIndex = 6;
-            this.buttonApplyConfig.Text = "Apply";
-            this.buttonApplyConfig.UseVisualStyleBackColor = true;
-            this.buttonApplyConfig.Click += new System.EventHandler(this.buttonApply_Click);
             // 
             // buttonStorecfg
             // 
@@ -416,89 +499,6 @@
             this.textBoxEps2Voffset.Name = "textBoxEps2Voffset";
             this.textBoxEps2Voffset.Size = new System.Drawing.Size(65, 20);
             this.textBoxEps2Voffset.TabIndex = 25;
-            // 
-            // label7
-            // 
-            this.label7.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(3, 6);
-            this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(78, 13);
-            this.label7.TabIndex = 9;
-            this.label7.Text = "Timeout Action";
-            // 
-            // comboBoxTimeoutAction
-            // 
-            this.comboBoxTimeoutAction.Anchor = System.Windows.Forms.AnchorStyles.Right;
-            this.comboBoxTimeoutAction.FormattingEnabled = true;
-            this.comboBoxTimeoutAction.Location = new System.Drawing.Point(88, 3);
-            this.comboBoxTimeoutAction.Name = "comboBoxTimeoutAction";
-            this.comboBoxTimeoutAction.Size = new System.Drawing.Size(85, 21);
-            this.comboBoxTimeoutAction.TabIndex = 10;
-            // 
-            // label8
-            // 
-            this.label8.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(3, 56);
-            this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(36, 13);
-            this.label8.TabIndex = 11;
-            this.label8.Text = "OLED";
-            // 
-            // comboBoxDisplaySpeed
-            // 
-            this.comboBoxDisplaySpeed.Anchor = System.Windows.Forms.AnchorStyles.Right;
-            this.comboBoxDisplaySpeed.FormattingEnabled = true;
-            this.comboBoxDisplaySpeed.Location = new System.Drawing.Point(88, 103);
-            this.comboBoxDisplaySpeed.Name = "comboBoxDisplaySpeed";
-            this.comboBoxDisplaySpeed.Size = new System.Drawing.Size(85, 21);
-            this.comboBoxDisplaySpeed.TabIndex = 12;
-            // 
-            // label9
-            // 
-            this.label9.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(3, 131);
-            this.label9.Name = "label9";
-            this.label9.Size = new System.Drawing.Size(55, 13);
-            this.label9.TabIndex = 13;
-            this.label9.Text = "Averaging";
-            // 
-            // comboBoxAveraging
-            // 
-            this.comboBoxAveraging.Anchor = System.Windows.Forms.AnchorStyles.Right;
-            this.comboBoxAveraging.FormattingEnabled = true;
-            this.comboBoxAveraging.Location = new System.Drawing.Point(88, 128);
-            this.comboBoxAveraging.Name = "comboBoxAveraging";
-            this.comboBoxAveraging.Size = new System.Drawing.Size(85, 21);
-            this.comboBoxAveraging.TabIndex = 14;
-            // 
-            // textBoxTimeoutDelay
-            // 
-            this.textBoxTimeoutDelay.Location = new System.Drawing.Point(88, 28);
-            this.textBoxTimeoutDelay.Name = "textBoxTimeoutDelay";
-            this.textBoxTimeoutDelay.Size = new System.Drawing.Size(85, 20);
-            this.textBoxTimeoutDelay.TabIndex = 23;
-            // 
-            // label10
-            // 
-            this.label10.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(3, 81);
-            this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(79, 13);
-            this.label10.TabIndex = 24;
-            this.label10.Text = "OLED Rotation";
-            // 
-            // comboBoxOledRotation
-            // 
-            this.comboBoxOledRotation.Anchor = System.Windows.Forms.AnchorStyles.Right;
-            this.comboBoxOledRotation.FormattingEnabled = true;
-            this.comboBoxOledRotation.Location = new System.Drawing.Point(88, 78);
-            this.comboBoxOledRotation.Name = "comboBoxOledRotation";
-            this.comboBoxOledRotation.Size = new System.Drawing.Size(85, 21);
-            this.comboBoxOledRotation.TabIndex = 25;
             // 
             // FormPMD
             // 

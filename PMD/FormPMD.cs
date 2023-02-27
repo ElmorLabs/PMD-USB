@@ -692,6 +692,7 @@ namespace PMD {
                     }
                 }
             } else {
+                data_logger.Commit();
                 csv_logging = false;
                 buttonLog.Text = "Log to CSV";
             }

@@ -91,6 +91,8 @@ namespace PMD {
             }
         }
 
+        List<string> lines_to_write = new List<string>();
+
         public void WriteLine() {
             string csv_line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + ",";
             foreach(LoggingItem logging_item in LoggingItemList) {
@@ -99,10 +101,24 @@ namespace PMD {
                 }
             }
             csv_line = csv_line.Substring(0, csv_line.Length - 1);
-            csv_line += Environment.NewLine;
-            try {
+            //csv_line += Environment.NewLine;
+            lines_to_write.Add(csv_line);
+            /*try {
                 File.AppendAllText(CSVPath, csv_line);
             } catch(Exception ex) {
+                MessageBox.Show(ex.Message);
+            }*/
+        }
+
+        public void Commit()
+        {
+            try
+            {
+                File.AppendAllLines(CSVPath, lines_to_write);
+                lines_to_write.Clear();
+            }
+            catch (Exception ex)
+            {
                 MessageBox.Show(ex.Message);
             }
         }
