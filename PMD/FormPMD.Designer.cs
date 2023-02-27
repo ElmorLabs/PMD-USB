@@ -65,6 +65,7 @@
             this.textBoxPcie2Voffset = new System.Windows.Forms.TextBox();
             this.textBoxEps1Voffset = new System.Windows.Forms.TextBox();
             this.textBoxEps2Voffset = new System.Windows.Forms.TextBox();
+            this.buttonFwu = new System.Windows.Forms.Button();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel3.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
@@ -500,11 +501,23 @@
             this.textBoxEps2Voffset.Size = new System.Drawing.Size(65, 20);
             this.textBoxEps2Voffset.TabIndex = 25;
             // 
+            // buttonFwu
+            // 
+            this.buttonFwu.Enabled = false;
+            this.buttonFwu.Location = new System.Drawing.Point(584, 105);
+            this.buttonFwu.Name = "buttonFwu";
+            this.buttonFwu.Size = new System.Drawing.Size(70, 23);
+            this.buttonFwu.TabIndex = 20;
+            this.buttonFwu.Text = "FW Update";
+            this.buttonFwu.UseVisualStyleBackColor = true;
+            this.buttonFwu.Click += new System.EventHandler(this.buttonFwu_Click);
+            // 
             // FormPMD
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(813, 622);
+            this.Controls.Add(this.buttonFwu);
             this.Controls.Add(this.tableLayoutPanel2);
             this.Controls.Add(this.panelMonitoring);
             this.Controls.Add(this.buttonWriteToFile);
@@ -522,7 +535,6 @@
             this.Name = "FormPMD";
             this.Text = "PMD-USB";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.FormKTH_FormClosing);
-            this.Load += new System.EventHandler(this.FormPMD_Load);
             this.tableLayoutPanel1.ResumeLayout(false);
             this.tableLayoutPanel1.PerformLayout();
             this.tableLayoutPanel3.ResumeLayout(false);
@@ -575,5 +587,6 @@
         private System.Windows.Forms.TextBox textBoxTimeoutDelay;
         private System.Windows.Forms.Label label10;
         private System.Windows.Forms.ComboBox comboBoxOledRotation;
+        private System.Windows.Forms.Button buttonFwu;
     }
 }

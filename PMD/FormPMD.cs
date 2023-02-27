@@ -1,16 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace PMD {
@@ -66,6 +61,8 @@ namespace PMD {
 
         DataLogger data_logger;
 
+        int FirmwareVersion;
+
         public FormPMD() {
 
             InitializeComponent();
@@ -74,7 +71,6 @@ namespace PMD {
             this.Text = "PMD-USB " + Application.ProductVersion;
 
             // Populate options
-
             comboBoxTimeoutAction.Items.Add("Cycle");
             comboBoxTimeoutAction.Items.Add("OLED Off");
             comboBoxTimeoutAction.Items.Add("Disabled");
@@ -105,74 +101,53 @@ namespace PMD {
 
             int graph_height = 100;
             int graph_width = panelMonitoring.Width / 2 - 20;
-            int graph_offset_y = 10;
-            int i = 0;
 
             // Add graphs
             graphList = new List<MonitorGraph>();
 
-            //MonitorGraph monitor_graph = new MonitorGraph(0, "TC1", "°C", "F1", 0, 10, graph_width, graph_height, true, "");
             MonitorGraph monitor_graph = new MonitorGraph("PCIE1 Voltage", 1, "V", graph_width, graph_height);
-            //monitor_graph.Location = new Point(0, graph_offset_y + (graph_height + graph_offset_y) * i++);
-            //monitor_graph.MouseEnter += Monitor_graph_MouseEnter;
-            //monitor_graph.MouseLeave += Monitor_graph_MouseLeave;
-            //monitor_graph.MouseMove += Monitor_graph_MouseMove;
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
 
             monitor_graph = new MonitorGraph("PCIE1 Current", 1, "A", graph_width, graph_height);
-            //monitor_graph.Location = new Point(0, graph_offset_y + (graph_height + graph_offset_y) * i++);
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
 
             monitor_graph = new MonitorGraph("PCIE1 Power", 0, "W", graph_width, graph_height);
-            //monitor_graph.Location = new Point(0, graph_offset_y + (graph_height + graph_offset_y) * i++);
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
 
             monitor_graph = new MonitorGraph("PCIE2 Voltage", 1, "V", graph_width, graph_height);
-            //monitor_graph.Location = new Point(0, graph_offset_y + (graph_height + graph_offset_y)*i++);
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
             monitor_graph = new MonitorGraph("PCIE2 Current", 1, "A", graph_width, graph_height);
-            //monitor_graph.Location = new Point(0, graph_offset_y + (graph_height + graph_offset_y) * i++);
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
             monitor_graph = new MonitorGraph("PCIE2 Power", 0, "W", graph_width, graph_height);
-            //monitor_graph.Location = new Point(0, graph_offset_y + (graph_height + graph_offset_y) * i++);
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
 
             monitor_graph = new MonitorGraph("EPS1 Voltage", 1, "V", graph_width, graph_height);
-            //monitor_graph.Location = new Point(0, graph_offset_y + (graph_height + graph_offset_y) * i++);
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
             monitor_graph = new MonitorGraph("EPS1 Current", 1, "A", graph_width, graph_height);
-            //monitor_graph.Location = new Point(0, graph_offset_y + (graph_height + graph_offset_y) * i++);
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
             monitor_graph = new MonitorGraph("EPS1 Power", 0, "W", graph_width, graph_height);
-            //monitor_graph.Location = new Point(0, graph_offset_y + (graph_height + graph_offset_y) * i++);
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
 
             monitor_graph = new MonitorGraph("EPS2 Voltage", 1, "V", graph_width, graph_height);
-            //monitor_graph.Location = new Point(0, graph_offset_y + (graph_height + graph_offset_y) * i++);
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
             monitor_graph = new MonitorGraph("EPS2 Current", 1, "A", graph_width, graph_height);
-            //monitor_graph.Location = new Point(0, graph_offset_y + (graph_height + graph_offset_y) * i++);
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
             monitor_graph = new MonitorGraph("EPS2 Power", 0, "W", graph_width, graph_height);
-            //monitor_graph.Location = new Point(0, graph_offset_y + (graph_height + graph_offset_y) * i++);
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
 
             data_logger = new DataLogger();
-
-            //UpdateConfigValues();
-            //UpdateCalValues();
 
             thread_start = new ThreadStart(update_task);
 
@@ -187,9 +162,12 @@ namespace PMD {
             task_thread.Start();
         }
 
-        private void StopMonitoring() {
+        private void StopMonitoring()
+        {
             run_task = false;
-            task_thread.Join(500);
+            if (task_thread != null) {
+                task_thread.Join(500);
+            }
         }
 
         private void UpdateSerialPorts() {
@@ -223,7 +201,8 @@ namespace PMD {
                 comboBoxPorts.SelectedIndex = comboBoxPorts.Items.Count - 1;
             }
         }
-        [StructLayout(LayoutKind.Sequential, Pack = 0)]
+
+        [StructLayout(LayoutKind.Sequential, Pack = 2)]
         public struct ConfigStruct {
             public byte Version;
             public UInt16 Crc;
@@ -257,7 +236,8 @@ namespace PMD {
 
                 // Config
                 rx_buffer = KTH_SendCmd(serial_port, new byte[] { (byte)UART_CMD.UART_CMD_READ_CONFIG }, Marshal.SizeOf(typeof(ConfigStruct)), true);
-                if(rx_buffer != null) {
+                if (rx_buffer != null) {
+
                     // Get struct
                     IntPtr ptr = Marshal.AllocHGlobal(rx_buffer.Length);
                     Marshal.Copy(rx_buffer, 0, ptr, rx_buffer.Length);
@@ -266,13 +246,12 @@ namespace PMD {
 
                     Marshal.FreeHGlobal(ptr);
 
-                    int adc_offset = (int)Marshal.OffsetOf(typeof(ConfigStruct), "AdcOffset");
-                    byte[] crc_buf = new byte[rx_buffer.Length - adc_offset];
-                    Array.Copy(rx_buffer, adc_offset, crc_buf, 0, rx_buffer.Length - adc_offset);
+                    int crc_data_offset = (int)Marshal.OffsetOf(typeof(ConfigStruct), "AdcOffset");
+                    int crc_data_length = (int)Marshal.OffsetOf(typeof(ConfigStruct), "rsvd") - crc_data_offset;
+                    byte[] crc_buf = new byte[crc_data_length];
+                    Array.Copy(rx_buffer, crc_data_offset, crc_buf, 0, crc_data_length);
 
                     int crc16 = CRC16_Calc(crc_buf, crc_buf.Length);
-
-                    //MessageBox.Show(crc16.ToString("X4") + " " + config_struct.Crc.ToString("X4"));
 
                     comboBoxTimeoutAction.SelectedIndex = config_struct.TimeoutAction;
                     textBoxTimeoutDelay.Text = config_struct.TimeoutCount.ToString();
@@ -297,10 +276,17 @@ namespace PMD {
 
         }
 
-
         private void WriteConfigValues(bool nvm) {
 
-            return;
+            if (FirmwareVersion < 05)
+            {
+                return;
+            }
+
+            if(serial_port == null)
+            {
+                return;
+            }
 
             ConfigStruct config_struct = new ConfigStruct();
             config_struct.Version = 4;
@@ -344,7 +330,7 @@ namespace PMD {
                 config_struct.AdcOffset[7] = offset;
             }
 
-            //config_struct.UpdateConfigFlag = (byte) ( nvm ? 1 : 3);
+            config_struct.UpdateConfigFlag = (byte) ( nvm ? 1 : 3);
 
             // Get struct
             int size = Marshal.SizeOf(config_struct);
@@ -354,9 +340,10 @@ namespace PMD {
             Marshal.Copy(ptr, tx_buffer, 0, size);
             Marshal.FreeHGlobal(ptr);
 
-            int adc_offset = (int)Marshal.OffsetOf(typeof(ConfigStruct), "AdcOffset");
-            byte[] crc_buf = new byte[size - adc_offset];
-            Array.Copy(tx_buffer, adc_offset, crc_buf, 0, size - adc_offset);
+            int crc_data_offset = (int)Marshal.OffsetOf(typeof(ConfigStruct), "AdcOffset");
+            int crc_data_length = (int)Marshal.OffsetOf(typeof(ConfigStruct), "rsvd") - crc_data_offset;
+            byte[] crc_buf = new byte[crc_data_length];
+            Array.Copy(tx_buffer, crc_data_offset, crc_buf, 0, crc_data_length);
 
             int crc16 = CRC16_Calc(crc_buf, crc_buf.Length);
 
@@ -364,7 +351,11 @@ namespace PMD {
             tx_buffer[crc_offset] = (byte)crc16;
             tx_buffer[crc_offset+1] = (byte)(crc16>>8);
 
-            if(!serial_port_mutex.WaitOne(1000)) {
+            StopMonitoring();
+
+            Thread.Sleep(100);
+
+            if (!serial_port_mutex.WaitOne(1000)) {
                 MessageBox.Show("Couldn't get serial port mutex");
                 return;
             }
@@ -383,20 +374,20 @@ namespace PMD {
 
             serial_port_mutex.ReleaseMutex();
 
+            StartMonitoring();
+
         }
 
         bool track = false;
         private void Monitor_graph_MouseMove(object sender, MouseEventArgs e) {
             if(track) {
                 MonitorGraph monitor_graph = (MonitorGraph)sender;
-                //monitor_graph.SetTrackX(e.X);
             }
         }
 
         private void Monitor_graph_MouseLeave(object sender, EventArgs e) {
             if(track) {
                 MonitorGraph monitor_graph = (MonitorGraph)sender;
-                //monitor_graph.SetTrackX(-1);
                 track = false;
             }
         }
@@ -407,7 +398,6 @@ namespace PMD {
 
         static bool run_task;
         private void update_task() {
-            //float[] temp = new float[2];
 
             byte[] rx_buffer;
 
@@ -426,9 +416,9 @@ namespace PMD {
             while(run_task) {
 
                 rx_buffer = null;
+
                 // Get sensor values
                 if(serial_port_mutex.WaitOne(1000)) {
-                    //serial_port.DiscardInBuffer();
                     rx_buffer = KTH_SendCmd(serial_port, new byte[] { (byte)UART_CMD.UART_CMD_READ_SENSOR_VALUES }, 4*2*2, false);
                     serial_port_mutex.ReleaseMutex();
                 }
@@ -458,21 +448,6 @@ namespace PMD {
 
                 Thread.Sleep(100);
 
-/*
-                if(WriteToFileName.Length > 0) {
-                    try {
-                        string text = "";
-                        if(checkBoxTc1.Checked) {
-                            text += temp[0].ToString("F1") + "°C " + (temp[0]*9/5f + 32).ToString("F1") + "°F" + Environment.NewLine;
-                        }
-                        if(checkBoxTc2.Checked) {
-                            text += temp[1].ToString("F1") + "°C " + (temp[1] * 9 / 5f + 32).ToString("F1") + "°F" + Environment.NewLine;
-                        }
-                        System.IO.File.WriteAllText(WriteToFileName, text);
-                    } catch(Exception ex) {
-
-                    }
-                }*/
             }
         }
 
@@ -504,6 +479,8 @@ namespace PMD {
                 MessageBox.Show("Couldn't get serial port mutex");
                 return;
             }
+            WriteConfigValues(true);
+            UpdateConfigValues();
             serial_port_mutex.ReleaseMutex();
         }
 
@@ -538,9 +515,9 @@ namespace PMD {
             MessageBox.Show("Not yet implemented");
         }
 
-        private void buttonApplyCal_Click(object sender, EventArgs e) {
-
-
+        private void buttonApplyCal_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("Not yet implemented");
         }
 
         private void buttonOpenPort_Click(object sender, EventArgs e) {
@@ -575,8 +552,6 @@ namespace PMD {
                     return;
                 }
 
-
-
                 // Check communication
                 if(!serial_port_mutex.WaitOne(1000)) {
                     MessageBox.Show("Couldn't get serial port mutex");
@@ -594,43 +569,73 @@ namespace PMD {
                 if(rx_buffer == null || rx_buffer[0] != 0xEE || rx_buffer[1] != 0x0A) {
                     MessageBox.Show("Error communicating with PMD-USB"); 
                     try {
-                        serial_port.Close();
-                        serial_port.Dispose();
-                        serial_port = null;
+                        ClosePort();
                     } catch(Exception ex) { }
                     return;
                 }
 
-                labelFwVerValue.Text = (rx_buffer[2]).ToString("X2");
+                FirmwareVersion = rx_buffer[2];
+
+                labelFwVerValue.Text = (FirmwareVersion).ToString("X2");
 
                 buttonOpenPort.Text = "Close";
+
+                if(FirmwareVersion != 05)
+                {
+                    if(MessageBox.Show("New firmware version 05 available, would you like to update?", "Notice", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                    {
+                        UpdateFirmware();
+
+                        // Re-init device
+                        ClosePort();
+                        buttonOpenPort_Click(null, null);
+                        return;
+                    }
+                } else
+                {
+                    buttonApplyConfig.Enabled = true;
+                    buttonStorecfg.Enabled = true;
+                }
 
                 UpdateConfigValues();
 
                 // Patch initial values
                 StartMonitoring();
 
+                buttonFwu.Enabled = true;
+
             } else {
-
-                StopMonitoring();
-
-                // Close serial port
-                try {
-                    serial_port.Close();
-                } catch(Exception ex) {
-                    MessageBox.Show("Error closing port: " + ex.Message);
-                }
-
-                try {
-                    serial_port.Dispose();
-                } catch(Exception ex) {
-
-                }
-
-                serial_port = null;
-
-                buttonOpenPort.Text = "Open";
+                ClosePort();
             }
+        }
+
+        private void ClosePort()
+        {
+
+            StopMonitoring();
+
+            // Close serial port
+            try
+            {
+                serial_port.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error closing port: " + ex.Message);
+            }
+
+            try
+            {
+                serial_port.Dispose();
+            }
+            catch (Exception ex)
+            {
+
+            }
+
+            serial_port = null;
+
+            buttonOpenPort.Text = "Open";
         }
 
         private void buttonRefreshPorts_Click(object sender, EventArgs e) {
@@ -700,31 +705,207 @@ namespace PMD {
 
         private string WriteToFileName = "";
 
-        private void buttonWriteToFile_Click(object sender, EventArgs e) {
-            if(WriteToFileName.Length < 1) {
+        private void buttonWriteToFile_Click(object sender, EventArgs e)
+        {
+            if (WriteToFileName.Length < 1)
+            {
                 SaveFileDialog sfd = new SaveFileDialog();
                 sfd.Filter = "txt files (*.txt)|*.txt";
                 sfd.RestoreDirectory = true;
-                if(sfd.ShowDialog() == DialogResult.OK) {
+                if (sfd.ShowDialog() == DialogResult.OK)
+                {
                     // Open and clear file
-                    try {
-                        System.IO.File.WriteAllText(sfd.FileName, "");
+                    try
+                    {
+                        File.WriteAllText(sfd.FileName, "");
                         WriteToFileName = sfd.FileName;
                         buttonWriteToFile.Text = "Stop writing file";
-                    } catch(Exception ex) {
+                    }
+                    catch (Exception ex)
+                    {
                         MessageBox.Show(ex.Message, "Error");
                     }
                 }
-            } else {
+            }
+            else
+            {
                 WriteToFileName = "";
                 buttonWriteToFile.Text = "Write to file";
 
             }
         }
 
-        private void FormPMD_Load(object sender, EventArgs e) {
+        #region Firmware update
 
+        // https://github.com/Microchip-MPLAB-Harmony/bootloader/blob/master/release_notes.md
+
+        private const int BL_CMD_UNLOCK = 0xa0;
+        private const int BL_CMD_DATA = 0xa1;
+        private const int BL_CMD_VERIFY = 0xa2;
+        private const int BL_CMD_RESET = 0xa3;
+        private const int BL_CMD_BKSWAP_RESET = 0xa4;
+
+        private const int BL_RESP_OK = 0x50;
+        private const int BL_RESP_ERROR = 0x51;
+        private const int BL_RESP_INVALID = 0x52;
+        private const int BL_RESP_CRC_OK = 0x53;
+        private const int BL_RESP_CRC_FAIL = 0x54;
+
+        private const int BL_GUARD = 0x5048434D;
+
+        private void UpdateFirmware()
+        {
+            if (!serial_port_mutex.WaitOne(1000))
+            {
+                MessageBox.Show("Couldn't get serial port mutex");
+                return;
+            }
+
+            bool result = true;
+
+            // Check firmware data
+            int fw_max_size = (16 * 1024) - 2048 - 256;
+
+            byte[] fw_data = new byte[fw_max_size];
+            try
+            {
+                byte[] fw_data_temp = File.ReadAllBytes(Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "PMD-05.bin"));
+                if (fw_data_temp.Length > fw_data.Length)
+                {
+                    MessageBox.Show("Firmware data is too long");
+                    result = false;
+                }
+                Array.Copy(fw_data_temp, 0, fw_data, 0, fw_data_temp.Length);
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error reading firmware file: {ex.Message}");
+                result = false;
+            }
+
+            // Check if we have KTH-USB
+
+            // ID
+            byte[] rx_buffer = KTH_SendCmd(serial_port, new byte[] { (byte)UART_CMD.UART_CMD_READ_ID }, 3, true);
+
+            if (rx_buffer == null || rx_buffer.Length != 3 || rx_buffer[0] != 0xEE || rx_buffer[1] != 0x0A)
+            {
+                result = MessageBox.Show("Error checking device ID, would you like to continue? If you manually entered bootloader, press OK.", "Error", MessageBoxButtons.OKCancel) == DialogResult.OK;
+            }
+
+            if (result)
+            {
+
+                // Enter bootloader
+                //MessageBox.Show("Entering bootloader...");
+                KTH_SendCmd(serial_port, new byte[] { (byte)UART_CMD.UART_CMD_BOOTLOADER }, 0, true);
+
+                Thread.Sleep(1000);
+
+                // Check bootloader
+
+                int addr = 0x800;
+
+                //MessageBox.Show("Unlocking bootloader...");
+                byte[] tx_buffer = new byte[8];
+                Array.Copy(uint32(addr), 0, tx_buffer, 0, 4);
+                Array.Copy(uint32(fw_data.Length), 0, tx_buffer, 4, 4);
+
+                result = send_request(serial_port, BL_CMD_UNLOCK, uint32(tx_buffer.Length), tx_buffer);
+
+                // Send data
+                for (int i = 0; i < fw_max_size / 256 && result; i++)
+                {
+                    //Console.Write($"Writing page {i}... ");
+                    tx_buffer = new byte[256 + 4];
+                    Array.Copy(uint32(addr + i * 256), 0, tx_buffer, 0, 4);
+                    Array.Copy(fw_data, i * 256, tx_buffer, 4, 256);
+                    result = send_request(serial_port, BL_CMD_DATA, uint32(tx_buffer.Length), tx_buffer);
+                    
+                }
+
+                //Console.Write("Resetting device...");
+                tx_buffer = new byte[16];
+                result = send_request(serial_port, BL_CMD_RESET, uint32(tx_buffer.Length), tx_buffer);
+
+                Thread.Sleep(1000);
+                
+            }
+
+            if(result)
+            {
+                MessageBox.Show("Update finished. Please replug your device.");
+            } else
+            {
+                MessageBox.Show("Error occurred during update");
+            }
+
+            serial_port_mutex.ReleaseMutex();
         }
+
+        static UInt32[] crc32_tab_gen()
+        {
+            UInt32[] res = new UInt32[256];
+
+            for (int i = 0; i < res.Length; i++)
+            {
+                UInt32 value = (UInt32)i;
+
+                for (int j = 0; j < 8; j++)
+                {
+                    if ((value & 1) != 0)
+                    {
+                        value = (value >> 1) ^ 0xedb88320;
+                    }
+                    else
+                    {
+                        value = value >> 1;
+                    }
+                }
+                res[i] = value;
+            }
+            return res;
+        }
+
+        static UInt32 crc32(UInt32[] tab, byte[] data)
+        {
+            UInt32 crc = 0xffffffff;
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                crc = tab[(crc ^ data[i]) & 0xff] ^ (crc >> 8);
+            }
+            return crc;
+        }
+
+        static byte[] uint32(int v)
+        {
+            return new byte[] { (byte)((v >> 0) & 0xff), (byte)((v >> 8) & 0xff), (byte)((v >> 16) & 0xff), (byte)((v >> 24) & 0xff) };
+        }
+        static bool send_request(SerialPort serial_port, byte cmd, byte[] size, byte[] data)
+        {
+
+            byte[] bl_guard = uint32(BL_GUARD);
+
+            byte[] tx_buffer = new byte[bl_guard.Length + 1 + size.Length + data.Length];
+
+            Array.Copy(bl_guard, 0, tx_buffer, 0, bl_guard.Length);
+            Array.Copy(size, 0, tx_buffer, bl_guard.Length, size.Length);
+            tx_buffer[bl_guard.Length + size.Length] = cmd;
+            if (data != null) Array.Copy(data, 0, tx_buffer, bl_guard.Length + size.Length + 1, data.Length);
+
+            byte[] rx_buffer = KTH_SendCmd(serial_port, tx_buffer, 1, true);
+
+            if (rx_buffer == null || rx_buffer.Length == 0 || rx_buffer[0] != BL_RESP_OK)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        #endregion Firmware update
 
         private static UInt16 CRC16_Calc(byte[] data, int length) {
             byte x;
@@ -738,6 +919,21 @@ namespace PMD {
             }
 
             return crc;
+        }
+
+        private void buttonFwu_Click(object sender, EventArgs e)
+        {
+            if (serial_port != null) {
+                if(MessageBox.Show("Are you sure you want to update firwamre?", "Warning", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                {
+                    StopMonitoring();
+                    Thread.Sleep(100);
+                    serial_port.DiscardInBuffer();
+                    UpdateFirmware();
+                    ClosePort();
+                    buttonOpenPort_Click(null, null);
+                }
+            }
         }
     }
 }
