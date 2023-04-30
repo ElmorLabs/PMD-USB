@@ -147,6 +147,18 @@ namespace PMD {
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
 
+            monitor_graph = new MonitorGraph("GPU Power", 0, "W", graph_width, graph_height);
+            graphList.Add(monitor_graph);
+            panelMonitoring.Controls.Add(monitor_graph);
+
+            monitor_graph = new MonitorGraph("CPU Power", 0, "W", graph_width, graph_height);
+            graphList.Add(monitor_graph);
+            panelMonitoring.Controls.Add(monitor_graph);
+
+            monitor_graph = new MonitorGraph("Total Power", 0, "W", graph_width, graph_height);
+            graphList.Add(monitor_graph);
+            panelMonitoring.Controls.Add(monitor_graph);
+
             data_logger = new DataLogger();
 
             thread_start = new ThreadStart(update_task);
@@ -424,10 +436,23 @@ namespace PMD {
                 }
 
                 if(rx_buffer != null) {
-                    for(int i = 0; i < 4; i++) {
+
+                    double gpu_power = 0;
+                    double cpu_power = 0;
+
+                    for (int i = 0; i < 4; i++) {
                         double voltage = ((Int16)(rx_buffer[i * 4 + 1] << 8 | rx_buffer[i * 4 + 0])) / 100.0;
                         double current = ((Int16)(rx_buffer[i * 4 + 2 + 1] << 8 | rx_buffer[i * 4 + 2 + 0])) / 10.0;
                         double power = voltage * current;
+
+                        if (i < 2)
+                        {
+                            gpu_power += power;
+                        } else
+                        {
+                            cpu_power += power;
+                        }
+
                         graphList[i * 3].Invoke((MethodInvoker)delegate {
                             graphList[i * 3].addValue(voltage);
                             graphList[i * 3 + 1].addValue(current);
@@ -439,10 +464,36 @@ namespace PMD {
                             data_logger.UpdateValue(i * 3 + 1, current);
                             data_logger.UpdateValue(i * 3 + 2, power);
                         }
+
                     }
 
-                    if(csv_logging) {
+                    double total_power = gpu_power + cpu_power;
+
+                    graphList[4 * 3].Invoke((MethodInvoker)delegate {
+                        graphList[4 * 3].addValue(gpu_power);
+                        graphList[4 * 3 + 1].addValue(cpu_power);
+                        graphList[4 * 3 + 2].addValue(total_power);
+                    });
+
+                    if (csv_logging)
+                    {
+                        data_logger.UpdateValue(4 * 3 + 0, gpu_power);
+                        data_logger.UpdateValue(4 * 3 + 1, cpu_power);
+                        data_logger.UpdateValue(4 * 3 + 2, total_power);
                         data_logger.WriteLine();
+                    }
+
+                    if (csv_logging) {
+                        data_logger.WriteLine();
+                    }
+
+                    if (!string.IsNullOrEmpty(WriteToFileName))
+                    {
+                        try
+                        {
+                            File.WriteAllText(WriteToFileName, total_power.ToString("F0") + "W");
+                        }
+                        catch { }
                     }
                 }
 
@@ -597,6 +648,8 @@ namespace PMD {
                     buttonStorecfg.Enabled = true;
                 }
 
+                buttonWriteToFile.Enabled = true;
+
                 UpdateConfigValues();
 
                 // Patch initial values
@@ -643,6 +696,7 @@ namespace PMD {
         }
 
         bool csv_logging = false;
+        bool log_to_file = false;
         int tc1_log_id = -1;
         int tc2_log_id = -1;
         
@@ -687,6 +741,10 @@ namespace PMD {
                         data_logger.AddLogItem("EPS2 Voltage", "V");
                         data_logger.AddLogItem("EPS2 Current", "A");
                         data_logger.AddLogItem("EPS2 Power", "W");
+
+                        data_logger.AddLogItem("GPU Power", "W");
+                        data_logger.AddLogItem("CPU Power", "W");
+                        data_logger.AddLogItem("Total Power", "W");
 
                         data_logger.WriteHeader();
                         csv_logging = true;
