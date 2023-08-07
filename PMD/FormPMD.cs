@@ -1,9 +1,12 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Management;
+using System.Resources;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
@@ -11,7 +14,7 @@ using System.Windows.Forms;
 namespace PMD {
     public partial class FormPMD : Form {
 
-        //private const string EVC2_PNPID = "USB\\VID_0483&PID_5740&MI_01";
+        private const string EVC2_PNPID = "USB\\VID_0483&PID_5740&MI_01";
         private const string CH340_PNPID = "USB\\VID_1A86&PID_7523";
 
         // UART interface commands
@@ -31,24 +34,60 @@ namespace PMD {
             UART_CMD_NOP = 0xFF
         };
 
+        List<byte> rx_buffer = new List<byte>();
 
-        public static byte[] KTH_SendCmd(SerialPort serial_port, byte[] tx_buffer, int rx_len, bool delay) {
+        private bool PMD_USB_SendCmd(UART_CMD cmd, int rx_len)
+        {
 
-            if(serial_port == null) {
-                return null;
+            if (serial_port == null)
+            {
+                return false;
             }
 
-            byte[] rx_buffer = new byte[rx_len];
-            try {
-                serial_port.Write(tx_buffer, 0, tx_buffer.Length);
-                if(delay) Thread.Sleep(1);
-                serial_port.Read(rx_buffer, 0, rx_buffer.Length);
-            } catch(Exception ex) {
-                return null;
+            lock (rx_buffer) rx_buffer.Clear();
+            serial_port.Write(new byte[] { (byte)cmd }, 0, 1);
+
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            while (rx_buffer.Count < rx_len && sw.ElapsedMilliseconds < 100)
+            {
+
             }
 
-            return rx_buffer;
+            return rx_buffer.Count == rx_len;
         }
+        private bool PMD_USB_SendBuffer(byte[] tx_buffer, int rx_len)
+        {
+
+            if (serial_port == null)
+            {
+                return false;
+            }
+
+            lock (rx_buffer) rx_buffer.Clear();
+            serial_port.Write(tx_buffer, 0, tx_buffer.Length);
+
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            while (rx_buffer.Count < rx_len && sw.ElapsedMilliseconds < 100)
+            {
+
+            }
+
+            return rx_buffer.Count == rx_len;
+        }
+
+        private void Serial_port_DataReceived(object sender, SerialDataReceivedEventArgs e)
+        {
+            int bytes = serial_port.BytesToRead;
+            byte[] data_buffer = new byte[bytes];
+            serial_port.Read(data_buffer, 0, bytes);
+            lock (rx_buffer)
+            {
+                rx_buffer.AddRange(data_buffer);
+            }
+        }
+
 
         List<MonitorGraph> graphList;
         ThreadStart thread_start;
@@ -105,7 +144,7 @@ namespace PMD {
             // Add graphs
             graphList = new List<MonitorGraph>();
 
-            MonitorGraph monitor_graph = new MonitorGraph("PCIE1 Voltage", 1, "V", graph_width, graph_height);
+            MonitorGraph monitor_graph = new MonitorGraph("PCIE1 Voltage", 2, "V", graph_width, graph_height);
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
 
@@ -117,7 +156,7 @@ namespace PMD {
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
 
-            monitor_graph = new MonitorGraph("PCIE2 Voltage", 1, "V", graph_width, graph_height);
+            monitor_graph = new MonitorGraph("PCIE2 Voltage", 2, "V", graph_width, graph_height);
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
             monitor_graph = new MonitorGraph("PCIE2 Current", 1, "A", graph_width, graph_height);
@@ -127,7 +166,7 @@ namespace PMD {
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
 
-            monitor_graph = new MonitorGraph("EPS1 Voltage", 1, "V", graph_width, graph_height);
+            monitor_graph = new MonitorGraph("EPS1 Voltage", 2, "V", graph_width, graph_height);
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
             monitor_graph = new MonitorGraph("EPS1 Current", 1, "A", graph_width, graph_height);
@@ -137,7 +176,7 @@ namespace PMD {
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
 
-            monitor_graph = new MonitorGraph("EPS2 Voltage", 1, "V", graph_width, graph_height);
+            monitor_graph = new MonitorGraph("EPS2 Voltage", 2, "V", graph_width, graph_height);
             graphList.Add(monitor_graph);
             panelMonitoring.Controls.Add(monitor_graph);
             monitor_graph = new MonitorGraph("EPS2 Current", 1, "A", graph_width, graph_height);
@@ -178,44 +217,101 @@ namespace PMD {
         {
             run_task = false;
             if (task_thread != null) {
-                task_thread.Join(500);
+                if(!task_thread.Join(500))
+                {
+                    return;
+                }
             }
         }
 
-        private void UpdateSerialPorts() {
+        private void UpdateSerialPorts()
+        {
+
             serial_ports = SerialPort.GetPortNames().ToList();
 
             comboBoxPorts.Items.Clear();
 
-            // https://stackoverflow.com/questions/2837985/getting-serial-port-information
-            using(var searcher = new ManagementObjectSearcher("SELECT * FROM WIN32_SerialPort")) {
-                foreach(string port in serial_ports) {
-                    bool found = false;
-                    foreach(ManagementObject queryObj in searcher.Get()) {
-                        if(queryObj["DeviceID"].ToString().Equals(port)) {
-                            string pnp_dev_id = queryObj["PNPDeviceID"].ToString();
-                            if(pnp_dev_id.StartsWith(CH340_PNPID)) {
-                                comboBoxPorts.Items.Add(port + ": EVC2 Serial Port");
-                                comboBoxPorts.SelectedIndex = comboBoxPorts.Items.Count - 1;
-                            } else {
-                                comboBoxPorts.Items.Add(port + ": " + queryObj["Description"].ToString());
-                            }
-                            found = true;
-                        }
-                    }
-                    if(!found) {
-                        comboBoxPorts.Items.Add(port + ": Unknown Serial Port");
-                    }
-                }
+            // Open registry to find matching CH340 USB-Serial ports
+
+            List<string> ch340_ports = new List<string>();
+            RegistryKey masterRegKey = null;
+
+            try
+            {
+                masterRegKey = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\USB\VID_1A86&PID_7523");
+            }
+            catch
+            {
             }
 
-            if(comboBoxPorts.SelectedIndex == -1) {
-                comboBoxPorts.SelectedIndex = comboBoxPorts.Items.Count - 1;
+            if (masterRegKey != null)
+            {
+                foreach (string subKey in masterRegKey.GetSubKeyNames())
+                {
+                    // Name must contain either VCP or Serial to be valid. Process any entries NOT matching
+                    // Compare to subKey (name of RegKey entry)
+                    try
+                    {
+                        RegistryKey subRegKey = masterRegKey.OpenSubKey($"{subKey}\\Device Parameters");
+                        if (subRegKey == null) continue;
+
+                        string value = (string)subRegKey.GetValue("PortName");
+
+                        if (subRegKey.GetValueKind("PortName") != RegistryValueKind.String) continue;
+
+                        if (value != null) ch340_ports.Add(value);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                }
+
+                masterRegKey.Close();
+            }
+
+            // https://stackoverflow.com/questions/2837985/getting-serial-port-information
+            using (var searcher = new ManagementObjectSearcher("SELECT * FROM WIN32_SerialPort"))
+            {
+                foreach (string port in serial_ports)
+                {
+                    bool found = false;
+                    if (ch340_ports.Contains(port))
+                    {
+                        comboBoxPorts.Items.Add(port + ": CH340 Serial Port");
+                        comboBoxPorts.SelectedIndex = comboBoxPorts.Items.Count - 1;
+                    }
+                    else
+                    {
+                        foreach (ManagementObject queryObj in searcher.Get())
+                        {
+                            if (queryObj["DeviceID"].ToString().Equals(port))
+                            {
+                                string pnp_dev_id = queryObj["PNPDeviceID"].ToString();
+                                if (pnp_dev_id.StartsWith(EVC2_PNPID))
+                                {
+                                    comboBoxPorts.Items.Add(port + ": EVC2 Serial Port");
+                                    comboBoxPorts.SelectedIndex = comboBoxPorts.Items.Count - 1;
+                                }
+                                else
+                                {
+                                    comboBoxPorts.Items.Add(port + ": " + queryObj["Description"].ToString());
+                                }
+                                found = true;
+                            }
+                        }
+                        if (!found)
+                        {
+                            comboBoxPorts.Items.Add(port + ": Unknown Serial Port");
+                        }
+                    }
+                }
             }
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 2)]
-        public struct ConfigStruct {
+        public struct ConfigStruct
+        {
             public byte Version;
             public UInt16 Crc;
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)] public sbyte[] AdcOffset;
@@ -231,6 +327,25 @@ namespace PMD {
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)] public byte[] rsvd; // Padding on V2
         }
 
+        [StructLayout(LayoutKind.Sequential, Pack = 2)]
+        public struct ConfigStructV5
+        {
+            public byte Version;
+            public UInt16 Crc;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)] public sbyte[] AdcOffset;
+            public byte OledDisable;
+            public UInt16 TimeoutCount;
+            public byte TimeoutAction;
+            public byte OledSpeed; //uint8_t rsvd[1]; // Padding on V1
+            public byte RestartAdcFlag;
+            public byte CalFlag;
+            public byte UpdateConfigFlag;
+            public byte OledRotation;
+            public byte Averaging;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)] public sbyte[] AdcGainOffset;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)] public byte[] rsvd; // Padding on V3
+        }
+
         private void UpdateConfigValues() {
 
             if(!serial_port_mutex.WaitOne(1000)) {
@@ -241,46 +356,96 @@ namespace PMD {
             serial_port.DiscardInBuffer();
 
             // ID
-            byte[] rx_buffer = KTH_SendCmd(serial_port, new byte[] { (byte)UART_CMD.UART_CMD_READ_ID }, 3, true);
-            if(rx_buffer != null) {
+            if(PMD_USB_SendCmd(UART_CMD.UART_CMD_READ_ID, 3)) {
 
-                labelFwVerValue.Text = (rx_buffer[2]).ToString("X2");
+                FirmwareVersion = rx_buffer[2];
+
+                labelFwVerValue.Text = (FirmwareVersion).ToString("X2");
 
                 // Config
-                rx_buffer = KTH_SendCmd(serial_port, new byte[] { (byte)UART_CMD.UART_CMD_READ_CONFIG }, Marshal.SizeOf(typeof(ConfigStruct)), true);
-                if (rx_buffer != null) {
 
-                    // Get struct
-                    IntPtr ptr = Marshal.AllocHGlobal(rx_buffer.Length);
-                    Marshal.Copy(rx_buffer, 0, ptr, rx_buffer.Length);
+                if (FirmwareVersion < 6)
+                {
+                    if (PMD_USB_SendCmd(UART_CMD.UART_CMD_READ_CONFIG, Marshal.SizeOf(typeof(ConfigStruct)))) {
 
-                    ConfigStruct config_struct = (ConfigStruct)Marshal.PtrToStructure(ptr, typeof(ConfigStruct));
+                        // Get struct
+                        IntPtr ptr = Marshal.AllocHGlobal(rx_buffer.Count);
+                        Marshal.Copy(rx_buffer.ToArray(), 0, ptr, rx_buffer.Count);
 
-                    Marshal.FreeHGlobal(ptr);
+                        ConfigStruct config_struct = (ConfigStruct)Marshal.PtrToStructure(ptr, typeof(ConfigStruct));
 
-                    int crc_data_offset = (int)Marshal.OffsetOf(typeof(ConfigStruct), "AdcOffset");
-                    int crc_data_length = (int)Marshal.OffsetOf(typeof(ConfigStruct), "rsvd") - crc_data_offset;
-                    byte[] crc_buf = new byte[crc_data_length];
-                    Array.Copy(rx_buffer, crc_data_offset, crc_buf, 0, crc_data_length);
+                        Marshal.FreeHGlobal(ptr);
 
-                    int crc16 = CRC16_Calc(crc_buf, crc_buf.Length);
+                        int crc_data_offset = (int)Marshal.OffsetOf(typeof(ConfigStruct), "AdcOffset");
+                        int crc_data_length = (int)Marshal.OffsetOf(typeof(ConfigStruct), "rsvd") - crc_data_offset;
+                        byte[] crc_buf = new byte[crc_data_length];
+                        Array.Copy(rx_buffer.ToArray(), crc_data_offset, crc_buf, 0, crc_data_length);
 
-                    comboBoxTimeoutAction.SelectedIndex = config_struct.TimeoutAction;
-                    textBoxTimeoutDelay.Text = config_struct.TimeoutCount.ToString();
-                    comboBoxOled.SelectedIndex = config_struct.OledDisable;
-                    comboBoxOledRotation.SelectedIndex = config_struct.OledRotation;
-                    comboBoxDisplaySpeed.SelectedIndex = config_struct.OledSpeed;
-                    comboBoxAveraging.SelectedIndex = config_struct.Averaging;
+                        int crc16 = CRC16_Calc(crc_buf, crc_buf.Length);
 
-                    textBoxPcie1Voffset.Text = config_struct.AdcOffset[0].ToString();
-                    textBoxPcie1Ioffset.Text = config_struct.AdcOffset[1].ToString();
-                    textBoxPcie2Voffset.Text = config_struct.AdcOffset[2].ToString();
-                    textBoxPcie2Ioffset.Text = config_struct.AdcOffset[3].ToString();
-                    textBoxEps1Voffset.Text = config_struct.AdcOffset[4].ToString();
-                    textBoxEps1Ioffset.Text = config_struct.AdcOffset[5].ToString();
-                    textBoxEps2Voffset.Text = config_struct.AdcOffset[6].ToString();
-                    textBoxEps2Ioffset.Text = config_struct.AdcOffset[7].ToString();
+                        comboBoxTimeoutAction.SelectedIndex = config_struct.TimeoutAction;
+                        textBoxTimeoutDelay.Text = config_struct.TimeoutCount.ToString();
+                        comboBoxOled.SelectedIndex = config_struct.OledDisable;
+                        comboBoxOledRotation.SelectedIndex = config_struct.OledRotation;
+                        comboBoxDisplaySpeed.SelectedIndex = config_struct.OledSpeed;
+                        comboBoxAveraging.SelectedIndex = config_struct.Averaging;
 
+                        textBoxPcie1Voffset.Text = config_struct.AdcOffset[0].ToString();
+                        textBoxPcie1Ioffset.Text = config_struct.AdcOffset[1].ToString();
+                        textBoxPcie2Voffset.Text = config_struct.AdcOffset[2].ToString();
+                        textBoxPcie2Ioffset.Text = config_struct.AdcOffset[3].ToString();
+                        textBoxEps1Voffset.Text = config_struct.AdcOffset[4].ToString();
+                        textBoxEps1Ioffset.Text = config_struct.AdcOffset[5].ToString();
+                        textBoxEps2Voffset.Text = config_struct.AdcOffset[6].ToString();
+                        textBoxEps2Ioffset.Text = config_struct.AdcOffset[7].ToString();
+
+                    }
+                } else
+                {
+                    if (PMD_USB_SendCmd(UART_CMD.UART_CMD_READ_CONFIG, Marshal.SizeOf(typeof(ConfigStructV5))))
+                    {
+
+                        // Get struct
+                        IntPtr ptr = Marshal.AllocHGlobal(rx_buffer.Count);
+                        Marshal.Copy(rx_buffer.ToArray(), 0, ptr, rx_buffer.Count);
+
+                        ConfigStructV5 config_struct = (ConfigStructV5)Marshal.PtrToStructure(ptr, typeof(ConfigStructV5));
+
+                        Marshal.FreeHGlobal(ptr);
+
+                        int crc_data_offset = (int)Marshal.OffsetOf(typeof(ConfigStruct), "AdcOffset");
+                        int crc_data_length = (int)Marshal.OffsetOf(typeof(ConfigStruct), "rsvd") - crc_data_offset;
+                        byte[] crc_buf = new byte[crc_data_length];
+                        Array.Copy(rx_buffer.ToArray(), crc_data_offset, crc_buf, 0, crc_data_length);
+
+                        int crc16 = CRC16_Calc(crc_buf, crc_buf.Length);
+
+                        comboBoxTimeoutAction.SelectedIndex = config_struct.TimeoutAction;
+                        textBoxTimeoutDelay.Text = config_struct.TimeoutCount.ToString();
+                        comboBoxOled.SelectedIndex = config_struct.OledDisable;
+                        comboBoxOledRotation.SelectedIndex = config_struct.OledRotation;
+                        comboBoxDisplaySpeed.SelectedIndex = config_struct.OledSpeed;
+                        comboBoxAveraging.SelectedIndex = config_struct.Averaging;
+
+                        textBoxPcie1Voffset.Text = config_struct.AdcOffset[0].ToString();
+                        textBoxPcie1Ioffset.Text = config_struct.AdcOffset[1].ToString();
+                        textBoxPcie2Voffset.Text = config_struct.AdcOffset[2].ToString();
+                        textBoxPcie2Ioffset.Text = config_struct.AdcOffset[3].ToString();
+                        textBoxEps1Voffset.Text = config_struct.AdcOffset[4].ToString();
+                        textBoxEps1Ioffset.Text = config_struct.AdcOffset[5].ToString();
+                        textBoxEps2Voffset.Text = config_struct.AdcOffset[6].ToString();
+                        textBoxEps2Ioffset.Text = config_struct.AdcOffset[7].ToString();
+
+                        textBoxPcie1Vgain.Text = config_struct.AdcGainOffset[0].ToString();
+                        textBoxPcie1Igain.Text = config_struct.AdcGainOffset[1].ToString();
+                        textBoxPcie2Vgain.Text = config_struct.AdcGainOffset[2].ToString();
+                        textBoxPcie2Igain.Text = config_struct.AdcGainOffset[3].ToString();
+                        textBoxEps1Vgain.Text = config_struct.AdcGainOffset[4].ToString();
+                        textBoxEps1Igain.Text = config_struct.AdcGainOffset[5].ToString();
+                        textBoxEps2Vgain.Text = config_struct.AdcGainOffset[6].ToString();
+                        textBoxEps2Igain.Text = config_struct.AdcGainOffset[7].ToString();
+
+                    }
                 }
             }
 
@@ -300,93 +465,216 @@ namespace PMD {
                 return;
             }
 
-            ConfigStruct config_struct = new ConfigStruct();
-            config_struct.Version = 4;
-
-            config_struct.TimeoutAction = (byte) comboBoxTimeoutAction.SelectedIndex;
-
-            UInt16 timeout_val;
-            if(UInt16.TryParse(textBoxTimeoutDelay.Text, out timeout_val)) {
-                config_struct.TimeoutCount = timeout_val;
-            }
-
-            config_struct.OledDisable = (byte) comboBoxOled.SelectedIndex;
-            config_struct.OledRotation = (byte) comboBoxOledRotation.SelectedIndex;
-            config_struct.OledSpeed = (byte) comboBoxDisplaySpeed.SelectedIndex;
-            config_struct.Averaging = (byte) comboBoxAveraging.SelectedIndex;
-
-            config_struct.AdcOffset = new sbyte[8];
-            sbyte offset;
-            if(sbyte.TryParse(textBoxPcie1Voffset.Text, out offset)) {
-                config_struct.AdcOffset[0] = offset;
-            }
-            if(sbyte.TryParse(textBoxPcie1Ioffset.Text, out offset)) {
-                config_struct.AdcOffset[1] = offset;
-            }
-            if(sbyte.TryParse(textBoxPcie2Voffset.Text, out offset)) {
-                config_struct.AdcOffset[2] = offset;
-            }
-            if(sbyte.TryParse(textBoxPcie2Ioffset.Text, out offset)) {
-                config_struct.AdcOffset[3] = offset;
-            }
-            if(sbyte.TryParse(textBoxEps1Voffset.Text, out offset)) {
-                config_struct.AdcOffset[4] = offset;
-            }
-            if(sbyte.TryParse(textBoxEps1Ioffset.Text, out offset)) {
-                config_struct.AdcOffset[5] = offset;
-            }
-            if(sbyte.TryParse(textBoxEps2Voffset.Text, out offset)) {
-                config_struct.AdcOffset[6] = offset;
-            }
-            if(sbyte.TryParse(textBoxEps2Ioffset.Text, out offset)) {
-                config_struct.AdcOffset[7] = offset;
-            }
-
-            config_struct.UpdateConfigFlag = (byte) ( nvm ? 1 : 3);
-
-            // Get struct
-            int size = Marshal.SizeOf(config_struct);
-            byte[] tx_buffer = new byte[size];
-            IntPtr ptr = Marshal.AllocHGlobal(size);
-            Marshal.StructureToPtr(config_struct, ptr, true);
-            Marshal.Copy(ptr, tx_buffer, 0, size);
-            Marshal.FreeHGlobal(ptr);
-
-            int crc_data_offset = (int)Marshal.OffsetOf(typeof(ConfigStruct), "AdcOffset");
-            int crc_data_length = (int)Marshal.OffsetOf(typeof(ConfigStruct), "rsvd") - crc_data_offset;
-            byte[] crc_buf = new byte[crc_data_length];
-            Array.Copy(tx_buffer, crc_data_offset, crc_buf, 0, crc_data_length);
-
-            int crc16 = CRC16_Calc(crc_buf, crc_buf.Length);
-
-            int crc_offset = (int)Marshal.OffsetOf(typeof(ConfigStruct), "Crc");
-            tx_buffer[crc_offset] = (byte)crc16;
-            tx_buffer[crc_offset+1] = (byte)(crc16>>8);
-
-            StopMonitoring();
-
-            Thread.Sleep(100);
-
-            if (!serial_port_mutex.WaitOne(1000)) {
+            if (!serial_port_mutex.WaitOne(1000))
+            {
                 MessageBox.Show("Couldn't get serial port mutex");
                 return;
             }
+
+            //StopMonitoring();
+
+            byte[] tx_buffer;
+
+            if (FirmwareVersion < 6)
+            {
+                ConfigStruct config_struct = new ConfigStruct();
+                config_struct.Version = 4;
+
+                config_struct.TimeoutAction = (byte)comboBoxTimeoutAction.SelectedIndex;
+
+                UInt16 timeout_val;
+                if (UInt16.TryParse(textBoxTimeoutDelay.Text, out timeout_val))
+                {
+                    config_struct.TimeoutCount = timeout_val;
+                }
+
+                config_struct.OledDisable = (byte)comboBoxOled.SelectedIndex;
+                config_struct.OledRotation = (byte)comboBoxOledRotation.SelectedIndex;
+                config_struct.OledSpeed = (byte)comboBoxDisplaySpeed.SelectedIndex;
+                config_struct.Averaging = (byte)comboBoxAveraging.SelectedIndex;
+
+                config_struct.AdcOffset = new sbyte[8];
+                sbyte offset;
+                if (sbyte.TryParse(textBoxPcie1Voffset.Text, out offset))
+                {
+                    config_struct.AdcOffset[0] = offset;
+                }
+                if (sbyte.TryParse(textBoxPcie1Ioffset.Text, out offset))
+                {
+                    config_struct.AdcOffset[1] = offset;
+                }
+                if (sbyte.TryParse(textBoxPcie2Voffset.Text, out offset))
+                {
+                    config_struct.AdcOffset[2] = offset;
+                }
+                if (sbyte.TryParse(textBoxPcie2Ioffset.Text, out offset))
+                {
+                    config_struct.AdcOffset[3] = offset;
+                }
+                if (sbyte.TryParse(textBoxEps1Voffset.Text, out offset))
+                {
+                    config_struct.AdcOffset[4] = offset;
+                }
+                if (sbyte.TryParse(textBoxEps1Ioffset.Text, out offset))
+                {
+                    config_struct.AdcOffset[5] = offset;
+                }
+                if (sbyte.TryParse(textBoxEps2Voffset.Text, out offset))
+                {
+                    config_struct.AdcOffset[6] = offset;
+                }
+                if (sbyte.TryParse(textBoxEps2Ioffset.Text, out offset))
+                {
+                    config_struct.AdcOffset[7] = offset;
+                }
+
+                config_struct.UpdateConfigFlag = (byte)(nvm ? 1 : 3);
+
+                // Get struct
+                int size = Marshal.SizeOf(config_struct);
+                tx_buffer = new byte[size];
+                IntPtr ptr = Marshal.AllocHGlobal(size);
+                Marshal.StructureToPtr(config_struct, ptr, true);
+                Marshal.Copy(ptr, tx_buffer, 0, size);
+                Marshal.FreeHGlobal(ptr);
+
+                int crc_data_offset = (int)Marshal.OffsetOf(typeof(ConfigStruct), "AdcOffset");
+                int crc_data_length = (int)Marshal.OffsetOf(typeof(ConfigStruct), "rsvd") - crc_data_offset;
+                byte[] crc_buf = new byte[crc_data_length];
+                Array.Copy(tx_buffer, crc_data_offset, crc_buf, 0, crc_data_length);
+
+                int crc16 = CRC16_Calc(crc_buf, crc_buf.Length);
+
+                int crc_offset = (int)Marshal.OffsetOf(typeof(ConfigStruct), "Crc");
+                tx_buffer[crc_offset] = (byte)crc16;
+                tx_buffer[crc_offset + 1] = (byte)(crc16 >> 8);
+            } else
+            {
+                ConfigStructV5 config_struct = new ConfigStructV5();
+                config_struct.Version = 5;
+
+                config_struct.TimeoutAction = (byte)comboBoxTimeoutAction.SelectedIndex;
+
+                UInt16 timeout_val;
+                if (UInt16.TryParse(textBoxTimeoutDelay.Text, out timeout_val))
+                {
+                    config_struct.TimeoutCount = timeout_val;
+                }
+
+                config_struct.OledDisable = (byte)comboBoxOled.SelectedIndex;
+                config_struct.OledRotation = (byte)comboBoxOledRotation.SelectedIndex;
+                config_struct.OledSpeed = (byte)comboBoxDisplaySpeed.SelectedIndex;
+                config_struct.Averaging = (byte)comboBoxAveraging.SelectedIndex;
+
+                config_struct.AdcOffset = new sbyte[8];
+                config_struct.AdcGainOffset = new sbyte[8];
+
+                if (sbyte.TryParse(textBoxPcie1Voffset.Text, out sbyte offset))
+                {
+                    config_struct.AdcOffset[0] = offset;
+                }
+                if (sbyte.TryParse(textBoxPcie1Ioffset.Text, out offset))
+                {
+                    config_struct.AdcOffset[1] = offset;
+                }
+                if (sbyte.TryParse(textBoxPcie2Voffset.Text, out offset))
+                {
+                    config_struct.AdcOffset[2] = offset;
+                }
+                if (sbyte.TryParse(textBoxPcie2Ioffset.Text, out offset))
+                {
+                    config_struct.AdcOffset[3] = offset;
+                }
+                if (sbyte.TryParse(textBoxEps1Voffset.Text, out offset))
+                {
+                    config_struct.AdcOffset[4] = offset;
+                }
+                if (sbyte.TryParse(textBoxEps1Ioffset.Text, out offset))
+                {
+                    config_struct.AdcOffset[5] = offset;
+                }
+                if (sbyte.TryParse(textBoxEps2Voffset.Text, out offset))
+                {
+                    config_struct.AdcOffset[6] = offset;
+                }
+                if (sbyte.TryParse(textBoxEps2Ioffset.Text, out offset))
+                {
+                    config_struct.AdcOffset[7] = offset;
+                }
+
+                if (sbyte.TryParse(textBoxPcie1Vgain.Text, out sbyte gain))
+                {
+                    config_struct.AdcGainOffset[0] = gain;
+                }
+                if (sbyte.TryParse(textBoxPcie1Igain.Text, out gain))
+                {
+                    config_struct.AdcGainOffset[1] = gain;
+                }
+                if (sbyte.TryParse(textBoxPcie2Vgain.Text, out gain))
+                {
+                    config_struct.AdcGainOffset[2] = gain;
+                }
+                if (sbyte.TryParse(textBoxPcie2Igain.Text, out gain))
+                {
+                    config_struct.AdcGainOffset[3] = gain;
+                }
+                if (sbyte.TryParse(textBoxEps1Vgain.Text, out gain))
+                {
+                    config_struct.AdcGainOffset[4] = gain;
+                }
+                if (sbyte.TryParse(textBoxEps1Igain.Text, out gain))
+                {
+                    config_struct.AdcGainOffset[5] = gain;
+                }
+                if (sbyte.TryParse(textBoxEps2Vgain.Text, out gain))
+                {
+                    config_struct.AdcGainOffset[6] = gain;
+                }
+                if (sbyte.TryParse(textBoxEps2Igain.Text, out gain))
+                {
+                    config_struct.AdcGainOffset[7] = gain;
+                }
+
+                config_struct.UpdateConfigFlag = (byte)(nvm ? 1 : 3);
+
+                // Get struct
+                int size = Marshal.SizeOf(config_struct);
+                tx_buffer = new byte[size];
+                IntPtr ptr = Marshal.AllocHGlobal(size);
+                Marshal.StructureToPtr(config_struct, ptr, true);
+                Marshal.Copy(ptr, tx_buffer, 0, size);
+                Marshal.FreeHGlobal(ptr);
+
+                int crc_data_offset = (int)Marshal.OffsetOf(typeof(ConfigStructV5), "AdcOffset");
+                int crc_data_length = (int)Marshal.OffsetOf(typeof(ConfigStructV5), "rsvd") - crc_data_offset;
+                byte[] crc_buf = new byte[crc_data_length];
+                Array.Copy(tx_buffer, crc_data_offset, crc_buf, 0, crc_data_length);
+
+                int crc16 = CRC16_Calc(crc_buf, crc_buf.Length);
+
+                int crc_offset = (int)Marshal.OffsetOf(typeof(ConfigStruct), "Crc");
+                tx_buffer[crc_offset] = (byte)crc16;
+                tx_buffer[crc_offset + 1] = (byte)(crc16 >> 8);
+            }
+
+            //Thread.Sleep(500);
+
 
             serial_port.DiscardInBuffer();
             serial_port.DiscardOutBuffer();
 
             // Write config
-            KTH_SendCmd(serial_port, new byte[] { (byte)UART_CMD.UART_CMD_WRITE_CONFIG }, 0, true);
+            PMD_USB_SendCmd(UART_CMD.UART_CMD_WRITE_CONFIG, 0);
 
             Thread.Sleep(10);
 
-            KTH_SendCmd(serial_port, tx_buffer, 0, true);
+            PMD_USB_SendBuffer(tx_buffer, 0);
 
             Thread.Sleep(10);
 
             serial_port_mutex.ReleaseMutex();
 
-            StartMonitoring();
+            //StartMonitoring();
 
         }
 
@@ -408,96 +696,94 @@ namespace PMD {
             track = true;
         }
 
-        static bool run_task;
+        volatile bool run_task;
         private void update_task() {
 
-            byte[] rx_buffer;
+            while (run_task) {
 
-            // Warmup
-            if(serial_port_mutex.WaitOne(1000)) {
-                for(int i = 0; i<2; i++) {
-                    rx_buffer = KTH_SendCmd(serial_port, new byte[] { (byte)UART_CMD.UART_CMD_READ_SENSOR_VALUES }, 4 * 2 * 2, false);
-                }
-                serial_port_mutex.ReleaseMutex();
-
-                Thread.Sleep(100);
-
-                serial_port.DiscardInBuffer();
-            }
-
-            while(run_task) {
-
-                rx_buffer = null;
+                bool result;
 
                 // Get sensor values
-                if(serial_port_mutex.WaitOne(1000)) {
-                    rx_buffer = KTH_SendCmd(serial_port, new byte[] { (byte)UART_CMD.UART_CMD_READ_SENSOR_VALUES }, 4*2*2, false);
+                result = serial_port_mutex.WaitOne(100);
+
+                if(result) 
+                {
+                    result = PMD_USB_SendCmd(UART_CMD.UART_CMD_READ_SENSOR_VALUES, 4 * 2 * 2);
+                    byte[] local_rx_buffer = rx_buffer.ToArray();
                     serial_port_mutex.ReleaseMutex();
-                }
 
-                if(rx_buffer != null) {
+                    if(result)
+                    {
 
-                    double gpu_power = 0;
-                    double cpu_power = 0;
+                        double gpu_power = 0;
+                        double cpu_power = 0;
 
-                    for (int i = 0; i < 4; i++) {
-                        double voltage = ((Int16)(rx_buffer[i * 4 + 1] << 8 | rx_buffer[i * 4 + 0])) / 100.0;
-                        double current = ((Int16)(rx_buffer[i * 4 + 2 + 1] << 8 | rx_buffer[i * 4 + 2 + 0])) / 10.0;
-                        double power = voltage * current;
-
-                        if (i < 2)
+                        for (int i = 0; i < 4; i++)
                         {
-                            gpu_power += power;
-                        } else
-                        {
-                            cpu_power += power;
+                            double voltage = ((Int16)(local_rx_buffer[i * 4 + 1] << 8 | local_rx_buffer[i * 4 + 0])) / 100.0;
+                            double current = ((Int16)(local_rx_buffer[i * 4 + 2 + 1] << 8 | local_rx_buffer[i * 4 + 2 + 0])) / 10.0;
+                            double power = voltage * current;
+
+                            if (i < 2)
+                            {
+                                gpu_power += power;
+                            }
+                            else
+                            {
+                                cpu_power += power;
+                            }
+
+                            graphList[i * 3].Invoke((MethodInvoker)delegate
+                            {
+                                graphList[i * 3].addValue(voltage);
+                                graphList[i * 3 + 1].addValue(current);
+                                graphList[i * 3 + 2].addValue(power);
+                            });
+
+                            if (csv_logging)
+                            {
+                                data_logger.UpdateValue(i * 3 + 0, voltage);
+                                data_logger.UpdateValue(i * 3 + 1, current);
+                                data_logger.UpdateValue(i * 3 + 2, power);
+                            }
+
                         }
 
-                        graphList[i * 3].Invoke((MethodInvoker)delegate {
-                            graphList[i * 3].addValue(voltage);
-                            graphList[i * 3 + 1].addValue(current);
-                            graphList[i * 3 + 2].addValue(power);
+                        double total_power = gpu_power + cpu_power;
+
+                        graphList[4 * 3].Invoke((MethodInvoker)delegate
+                        {
+                            graphList[4 * 3].addValue(gpu_power);
+                            graphList[4 * 3 + 1].addValue(cpu_power);
+                            graphList[4 * 3 + 2].addValue(total_power);
                         });
 
-                        if(csv_logging) {
-                            data_logger.UpdateValue(i * 3 + 0, voltage);
-                            data_logger.UpdateValue(i * 3 + 1, current);
-                            data_logger.UpdateValue(i * 3 + 2, power);
-                        }
-
-                    }
-
-                    double total_power = gpu_power + cpu_power;
-
-                    graphList[4 * 3].Invoke((MethodInvoker)delegate {
-                        graphList[4 * 3].addValue(gpu_power);
-                        graphList[4 * 3 + 1].addValue(cpu_power);
-                        graphList[4 * 3 + 2].addValue(total_power);
-                    });
-
-                    if (csv_logging)
-                    {
-                        data_logger.UpdateValue(4 * 3 + 0, gpu_power);
-                        data_logger.UpdateValue(4 * 3 + 1, cpu_power);
-                        data_logger.UpdateValue(4 * 3 + 2, total_power);
-                        data_logger.WriteLine();
-                    }
-
-                    if (csv_logging) {
-                        data_logger.WriteLine();
-                    }
-
-                    if (!string.IsNullOrEmpty(WriteToFileName))
-                    {
-                        try
+                        if (csv_logging)
                         {
-                            File.WriteAllText(WriteToFileName, total_power.ToString("F0") + "W");
+                            data_logger.UpdateValue(4 * 3 + 0, gpu_power);
+                            data_logger.UpdateValue(4 * 3 + 1, cpu_power);
+                            data_logger.UpdateValue(4 * 3 + 2, total_power);
+                            data_logger.WriteLine();
                         }
-                        catch { }
-                    }
-                }
 
-                Thread.Sleep(100);
+                        if (csv_logging)
+                        {
+                            data_logger.WriteLine();
+                        }
+
+                        if (!string.IsNullOrEmpty(WriteToFileName))
+                        {
+                            try
+                            {
+                                File.WriteAllText(WriteToFileName, total_power.ToString("F0") + "W");
+                            }
+                            catch { }
+                        }
+
+                        Thread.Sleep(100);
+                    }
+
+                }
 
             }
         }
@@ -512,7 +798,7 @@ namespace PMD {
                 MessageBox.Show("Couldn't get serial port mutex");
                 return;
             }
-            KTH_SendCmd(serial_port, new byte[] { (byte) UART_CMD.UART_CMD_RESET }, 0, true);
+            PMD_USB_SendCmd(UART_CMD.UART_CMD_RESET, 0);
             serial_port_mutex.ReleaseMutex();
         }
 
@@ -521,7 +807,7 @@ namespace PMD {
                 MessageBox.Show("Couldn't get serial port mutex");
                 return;
             }
-            KTH_SendCmd(serial_port, new byte[] { (byte)UART_CMD.UART_CMD_BOOTLOADER }, 0, true);
+            PMD_USB_SendCmd(UART_CMD.UART_CMD_BOOTLOADER, 0);
             serial_port_mutex.ReleaseMutex();
         }
 
@@ -542,42 +828,14 @@ namespace PMD {
 
         }
 
-        private void buttonChangeCalProfile_Click(object sender, EventArgs e) {
-            if(!serial_port_mutex.WaitOne(1000)) {
-                MessageBox.Show("Couldn't get serial port mutex");
-                return;
-            }
-            serial_port_mutex.ReleaseMutex();
-
-        }
-
-        private void buttonCalOffset_Click(object sender, EventArgs e) {
-
-            if(!serial_port_mutex.WaitOne(1000)) {
-                MessageBox.Show("Couldn't get serial port mutex");
-                return;
-            }
-
-            serial_port_mutex.ReleaseMutex();
-
-        }
-
-        private void buttonCalGain_Click(object sender, EventArgs e) {
-            MessageBox.Show("Not yet implemented");
-        }
-
-        private void buttonApplyCal_Click(object sender, EventArgs e)
-        {
-            MessageBox.Show("Not yet implemented");
-        }
-
         private void buttonOpenPort_Click(object sender, EventArgs e) {
             if(serial_port == null || !serial_port.IsOpen) {
-                if(comboBoxPorts.SelectedIndex >= serial_ports.Count) {
+                if(comboBoxPorts.SelectedIndex >= serial_ports.Count || comboBoxPorts.SelectedIndex < 0) {
                     return;
                 }
 
                 try {
+
                     serial_port = new SerialPort(serial_ports[comboBoxPorts.SelectedIndex]);
 
                     serial_port.BaudRate = 115200;
@@ -588,6 +846,11 @@ namespace PMD {
                     serial_port.Handshake = Handshake.None;
                     serial_port.ReadTimeout = 100;
                     serial_port.WriteTimeout = 100;
+
+                    serial_port.RtsEnable = true;
+                    serial_port.DtrEnable = true;
+
+                    serial_port.DataReceived += Serial_port_DataReceived;
 
                 } catch(Exception ex) {
                     MessageBox.Show("Error initializing serial port: " + ex.Message);
@@ -613,11 +876,11 @@ namespace PMD {
                 serial_port.DiscardInBuffer();
 
                 // ID
-                byte[] rx_buffer = KTH_SendCmd(serial_port, new byte[] { (byte)UART_CMD.UART_CMD_READ_ID }, 3, true);
+                bool result  = PMD_USB_SendCmd(UART_CMD.UART_CMD_READ_ID, 3);
 
                 serial_port_mutex.ReleaseMutex();
 
-                if(rx_buffer == null || rx_buffer[0] != 0xEE || rx_buffer[1] != 0x0A) {
+                if(!result || rx_buffer[0] != 0xEE || rx_buffer[1] != 0x0A) {
                     MessageBox.Show("Error communicating with PMD-USB"); 
                     try {
                         ClosePort();
@@ -631,9 +894,9 @@ namespace PMD {
 
                 buttonOpenPort.Text = "Close";
 
-                if(FirmwareVersion != 05)
+                if(FirmwareVersion != 06)
                 {
-                    if(MessageBox.Show("New firmware version 05 available, would you like to update?", "Notice", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                    if(MessageBox.Show("New firmware version 06 available, would you like to update?", "Notice", MessageBoxButtons.YesNo) == DialogResult.Yes)
                     {
                         UpdateFirmware();
 
@@ -827,7 +1090,7 @@ namespace PMD {
             byte[] fw_data = new byte[fw_max_size];
             try
             {
-                byte[] fw_data_temp = File.ReadAllBytes(Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "PMD-05.bin"));
+                byte[] fw_data_temp = File.ReadAllBytes(Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "PMD-06.bin"));
                 if (fw_data_temp.Length > fw_data.Length)
                 {
                     MessageBox.Show("Firmware data is too long");
@@ -845,9 +1108,9 @@ namespace PMD {
             // Check if we have KTH-USB
 
             // ID
-            byte[] rx_buffer = KTH_SendCmd(serial_port, new byte[] { (byte)UART_CMD.UART_CMD_READ_ID }, 3, true);
+            result = PMD_USB_SendCmd(UART_CMD.UART_CMD_READ_ID , 3);
 
-            if (rx_buffer == null || rx_buffer.Length != 3 || rx_buffer[0] != 0xEE || rx_buffer[1] != 0x0A)
+            if (!result || rx_buffer[0] != 0xEE || rx_buffer[1] != 0x0A)
             {
                 result = MessageBox.Show("Error checking device ID, would you like to continue? If you manually entered bootloader, press OK.", "Error", MessageBoxButtons.OKCancel) == DialogResult.OK;
             }
@@ -857,7 +1120,7 @@ namespace PMD {
 
                 // Enter bootloader
                 //MessageBox.Show("Entering bootloader...");
-                KTH_SendCmd(serial_port, new byte[] { (byte)UART_CMD.UART_CMD_BOOTLOADER }, 0, true);
+                PMD_USB_SendCmd(UART_CMD.UART_CMD_BOOTLOADER, 0);
 
                 Thread.Sleep(1000);
 
@@ -941,7 +1204,8 @@ namespace PMD {
         {
             return new byte[] { (byte)((v >> 0) & 0xff), (byte)((v >> 8) & 0xff), (byte)((v >> 16) & 0xff), (byte)((v >> 24) & 0xff) };
         }
-        static bool send_request(SerialPort serial_port, byte cmd, byte[] size, byte[] data)
+
+        bool send_request(SerialPort serial_port, byte cmd, byte[] size, byte[] data)
         {
 
             byte[] bl_guard = uint32(BL_GUARD);
@@ -953,9 +1217,9 @@ namespace PMD {
             tx_buffer[bl_guard.Length + size.Length] = cmd;
             if (data != null) Array.Copy(data, 0, tx_buffer, bl_guard.Length + size.Length + 1, data.Length);
 
-            byte[] rx_buffer = KTH_SendCmd(serial_port, tx_buffer, 1, true);
+            bool result = PMD_USB_SendBuffer(tx_buffer, 1);
 
-            if (rx_buffer == null || rx_buffer.Length == 0 || rx_buffer[0] != BL_RESP_OK)
+            if (!result || rx_buffer[0] != BL_RESP_OK)
             {
                 return false;
             }
