@@ -747,6 +747,21 @@ namespace PMD {
                                 data_logger.UpdateValue(i * 3 + 2, power);
                             }
 
+                            if (hwinfo_export)
+                            {
+                                try
+                                {
+                                    RegistryKey key;
+                                    key = hwinfo_reg_key.OpenSubKey($"Volt{i}", true);
+                                    key.SetValue("Value", voltage, RegistryValueKind.String);
+                                    key = hwinfo_reg_key.OpenSubKey($"Current{i}", true);
+                                    key.SetValue("Value", current, RegistryValueKind.String);
+                                    key = hwinfo_reg_key.OpenSubKey($"Power{i}", true);
+                                    key.SetValue("Value", power, RegistryValueKind.String);
+                                }
+                                catch { }
+                            }
+
                         }
 
                         double total_power = gpu_power + cpu_power;
@@ -780,6 +795,21 @@ namespace PMD {
                             catch { }
                         }
 
+                        if (hwinfo_export)
+                        {
+                            try
+                            {
+                                RegistryKey key;
+                                key = hwinfo_reg_key.OpenSubKey($"Power4", true);
+                                key.SetValue("Value", gpu_power, RegistryValueKind.String);
+                                key = hwinfo_reg_key.OpenSubKey($"Power5", true);
+                                key.SetValue("Value", cpu_power, RegistryValueKind.String);
+                                key = hwinfo_reg_key.OpenSubKey($"Power6", true);
+                                key.SetValue("Value", total_power, RegistryValueKind.String);
+                            }
+                            catch { }
+                        }
+
                         Thread.Sleep(100);
                     }
 
@@ -791,6 +821,7 @@ namespace PMD {
 
         private void FormKTH_FormClosing(object sender, FormClosingEventArgs e) {
             run_task = false;
+            ClosePort();
         }
 
         private void buttonReset_Click(object sender, EventArgs e) {
@@ -909,6 +940,7 @@ namespace PMD {
                 {
                     buttonApplyConfig.Enabled = true;
                     buttonStorecfg.Enabled = true;
+                    buttonHwinfo.Enabled = true;
                 }
 
                 buttonWriteToFile.Enabled = true;
@@ -952,6 +984,18 @@ namespace PMD {
             serial_port = null;
 
             buttonOpenPort.Text = "Open";
+
+            buttonApplyConfig.Enabled = true;
+            buttonStorecfg.Enabled = true;
+            buttonHwinfo.Enabled = true;
+
+            csv_logging = true;
+            hwinfo_export = true;
+            WriteToFileName = "fakename";
+
+            buttonLog_Click(null, null);
+            buttonHwinfo_Click(null, null);
+            buttonWriteToFile_Click(null, null);
         }
 
         private void buttonRefreshPorts_Click(object sender, EventArgs e) {
@@ -959,9 +1003,6 @@ namespace PMD {
         }
 
         bool csv_logging = false;
-        bool log_to_file = false;
-        int tc1_log_id = -1;
-        int tc2_log_id = -1;
         
         private void buttonLog_Click(object sender, EventArgs e) {
             if(!csv_logging) {
@@ -1018,7 +1059,7 @@ namespace PMD {
                     }
                 }
             } else {
-                data_logger.Commit();
+                //data_logger.Commit();
                 csv_logging = false;
                 buttonLog.Text = "Log to CSV";
             }
@@ -1050,7 +1091,7 @@ namespace PMD {
             }
             else
             {
-                WriteToFileName = "";
+                WriteToFileName = string.Empty;
                 buttonWriteToFile.Text = "Write to file";
 
             }
@@ -1255,6 +1296,204 @@ namespace PMD {
                     ClosePort();
                     buttonOpenPort_Click(null, null);
                 }
+            }
+        }
+
+        bool hwinfo_export = false;
+
+        public RegistryKey hwinfo_reg_key;
+        private const string HWINFO_REG_KEY = "Software\\HWiNFO64\\Sensors\\Custom";
+        private const string PMD_REG_KEY = "ElmorLabs PMD-USB";
+
+        private void buttonHwinfo_Click(object sender, EventArgs e)
+        {
+            if (!hwinfo_export)
+            {
+                try
+                {
+                    hwinfo_reg_key = Registry.CurrentUser.OpenSubKey(HWINFO_REG_KEY, true);
+                    if (hwinfo_reg_key == null)
+                    {
+                        hwinfo_reg_key = Registry.CurrentUser.CreateSubKey(HWINFO_REG_KEY, true);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception(ex.Message);
+                }
+
+                if (hwinfo_reg_key == null)
+                {
+                    throw new Exception("Error accessing registry.");
+                }
+
+                try
+                {
+
+                    if (hwinfo_reg_key.OpenSubKey(PMD_REG_KEY) != null)
+                    {
+                        hwinfo_reg_key.DeleteSubKeyTree("");
+                    }
+
+                    hwinfo_reg_key = hwinfo_reg_key.CreateSubKey(PMD_REG_KEY);
+
+                    if (hwinfo_reg_key == null)
+                    {
+                        throw new Exception("Error accessing registry.");
+                    }
+
+                    RegistryKey key;
+
+                    key = hwinfo_reg_key.CreateSubKey("Volt0");
+                    if (key == null)
+                    {
+                        throw new Exception("Error accessing registry.");
+                    }
+                    key.SetValue("Name", "PCIE1", RegistryValueKind.String);
+                    key.SetValue("Value", "0", RegistryValueKind.String);
+
+                    key = hwinfo_reg_key.CreateSubKey("Current0");
+                    if (key == null)
+                    {
+                        throw new Exception("Error accessing registry.");
+                    }
+                    key.SetValue("Name", "PCIE1", RegistryValueKind.String);
+                    key.SetValue("Value", "0", RegistryValueKind.String);
+
+                    key = hwinfo_reg_key.CreateSubKey("Power0");
+                    if (key == null)
+                    {
+                        throw new Exception("Error accessing registry.");
+                    }
+                    key.SetValue("Name", "PCIE1", RegistryValueKind.String);
+                    key.SetValue("Value", "0", RegistryValueKind.String);
+
+                    key = hwinfo_reg_key.CreateSubKey("Volt1");
+                    if (key == null)
+                    {
+                        throw new Exception("Error accessing registry.");
+                    }
+                    key.SetValue("Name", "PCIE2", RegistryValueKind.String);
+                    key.SetValue("Value", "0", RegistryValueKind.String);
+
+                    key = hwinfo_reg_key.CreateSubKey("Current1");
+                    if (key == null)
+                    {
+                        throw new Exception("Error accessing registry.");
+                    }
+                    key.SetValue("Name", "PCIE2", RegistryValueKind.String);
+                    key.SetValue("Value", "0", RegistryValueKind.String);
+
+                    key = hwinfo_reg_key.CreateSubKey("Power1");
+                    if (key == null)
+                    {
+                        throw new Exception("Error accessing registry.");
+                    }
+                    key.SetValue("Name", "PCIE2", RegistryValueKind.String);
+                    key.SetValue("Value", "0", RegistryValueKind.String);
+
+                    key = hwinfo_reg_key.CreateSubKey("Current1");
+                    if (key == null)
+                    {
+                        throw new Exception("Error accessing registry.");
+                    }
+                    key.SetValue("Name", "PCIE2", RegistryValueKind.String);
+                    key.SetValue("Value", "0", RegistryValueKind.String);
+
+                    key = hwinfo_reg_key.CreateSubKey("Volt2");
+                    if (key == null)
+                    {
+                        throw new Exception("Error accessing registry.");
+                    }
+                    key.SetValue("Name", "EPS1", RegistryValueKind.String);
+                    key.SetValue("Value", "0", RegistryValueKind.String);
+
+                    key = hwinfo_reg_key.CreateSubKey("Current2");
+                    if (key == null)
+                    {
+                        throw new Exception("Error accessing registry.");
+                    }
+                    key.SetValue("Name", "EPS1", RegistryValueKind.String);
+                    key.SetValue("Value", "0", RegistryValueKind.String);
+
+                    key = hwinfo_reg_key.CreateSubKey("Power2");
+                    if (key == null)
+                    {
+                        throw new Exception("Error accessing registry.");
+                    }
+                    key.SetValue("Name", "EPS1", RegistryValueKind.String);
+                    key.SetValue("Value", "0", RegistryValueKind.String);
+
+                    key = hwinfo_reg_key.CreateSubKey("Volt3");
+                    if (key == null)
+                    {
+                        throw new Exception("Error accessing registry.");
+                    }
+                    key.SetValue("Name", "EPS2", RegistryValueKind.String);
+                    key.SetValue("Value", "0", RegistryValueKind.String);
+
+                    key = hwinfo_reg_key.CreateSubKey("Current3");
+                    if (key == null)
+                    {
+                        throw new Exception("Error accessing registry.");
+                    }
+                    key.SetValue("Name", "EPS2", RegistryValueKind.String);
+                    key.SetValue("Value", "0", RegistryValueKind.String);
+
+                    key = hwinfo_reg_key.CreateSubKey("Power3");
+                    if (key == null)
+                    {
+                        throw new Exception("Error accessing registry.");
+                    }
+                    key.SetValue("Name", "EPS2", RegistryValueKind.String);
+                    key.SetValue("Value", "0", RegistryValueKind.String);
+
+                    key = hwinfo_reg_key.CreateSubKey("Power4");
+                    if (key == null)
+                    {
+                        throw new Exception("Error accessing registry.");
+                    }
+                    key.SetValue("Name", "GPU", RegistryValueKind.String);
+                    key.SetValue("Value", "0", RegistryValueKind.String);
+
+                    key = hwinfo_reg_key.CreateSubKey("Power5");
+                    if (key == null)
+                    {
+                        throw new Exception("Error accessing registry.");
+                    }
+                    key.SetValue("Name", "CPU", RegistryValueKind.String);
+                    key.SetValue("Value", "0", RegistryValueKind.String);
+
+                    key = hwinfo_reg_key.CreateSubKey("Power6");
+                    if (key == null)
+                    {
+                        throw new Exception("Error accessing registry.");
+                    }
+                    key.SetValue("Name", "Total", RegistryValueKind.String);
+                    key.SetValue("Value", "0", RegistryValueKind.String);
+
+
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                    return;
+                }
+
+                hwinfo_export = true;
+                buttonHwinfo.Text = "Stop";
+
+            }
+            else
+            {
+                try
+                {
+                    hwinfo_reg_key.DeleteSubKeyTree("");
+                }
+                catch { }
+                hwinfo_export = false;
+                buttonHwinfo.Text = "HWInfo";
+
             }
         }
     }
