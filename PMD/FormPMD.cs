@@ -886,7 +886,7 @@ namespace PMD {
                 } catch(Exception ex) {
                     MessageBox.Show("Error initializing serial port: " + ex.Message);
                     serial_port = null;
-                    buttonOpenPort.Text = "Open";
+                    buttonOpenPort.Text = "Connect";
                     return;
                 }
 
@@ -923,7 +923,7 @@ namespace PMD {
 
                 labelFwVerValue.Text = (FirmwareVersion).ToString("X2");
 
-                buttonOpenPort.Text = "Close";
+                buttonOpenPort.Text = "Disconnect";
 
                 if(FirmwareVersion != 06)
                 {
@@ -962,40 +962,52 @@ namespace PMD {
 
             StopMonitoring();
 
+            Thread.Sleep(100);
+
+            if (csv_logging)
+            {
+                buttonLog_Click(null, null);
+            }
+            if (hwinfo_export)
+            {
+                buttonHwinfo_Click(null, null);
+            }
+            if (!string.IsNullOrEmpty(WriteToFileName))
+            {
+                buttonWriteToFile_Click(null, null);
+            }
+
             // Close serial port
-            try
+            if (serial_port != null)
             {
-                serial_port.Close();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error closing port: " + ex.Message);
+                try
+                {
+                    serial_port.Close();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error closing port: " + ex.Message);
+                }
+
+                try
+                {
+                    serial_port.Dispose();
+                }
+                catch (Exception ex)
+                {
+
+                }
+
+                serial_port = null;
             }
 
-            try
-            {
-                serial_port.Dispose();
-            }
-            catch (Exception ex)
-            {
-
-            }
-
-            serial_port = null;
-
-            buttonOpenPort.Text = "Open";
+            buttonOpenPort.Text = "Connect";
 
             buttonApplyConfig.Enabled = true;
             buttonStorecfg.Enabled = true;
             buttonHwinfo.Enabled = true;
 
-            csv_logging = true;
-            hwinfo_export = true;
-            WriteToFileName = "fakename";
 
-            buttonLog_Click(null, null);
-            buttonHwinfo_Click(null, null);
-            buttonWriteToFile_Click(null, null);
         }
 
         private void buttonRefreshPorts_Click(object sender, EventArgs e) {
@@ -1059,17 +1071,17 @@ namespace PMD {
                     }
                 }
             } else {
-                //data_logger.Commit();
+                data_logger.Commit();
                 csv_logging = false;
                 buttonLog.Text = "Log to CSV";
             }
         }
 
-        private string WriteToFileName = "";
+        private string WriteToFileName = string.Empty;
 
         private void buttonWriteToFile_Click(object sender, EventArgs e)
         {
-            if (WriteToFileName.Length < 1)
+            if (string.IsNullOrEmpty(WriteToFileName))
             {
                 SaveFileDialog sfd = new SaveFileDialog();
                 sfd.Filter = "txt files (*.txt)|*.txt";

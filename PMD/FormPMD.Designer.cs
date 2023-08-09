@@ -320,7 +320,7 @@
             this.buttonOpenPort.Name = "buttonOpenPort";
             this.buttonOpenPort.Size = new System.Drawing.Size(70, 23);
             this.buttonOpenPort.TabIndex = 13;
-            this.buttonOpenPort.Text = "Open";
+            this.buttonOpenPort.Text = "Connect";
             this.buttonOpenPort.UseVisualStyleBackColor = true;
             this.buttonOpenPort.Click += new System.EventHandler(this.buttonOpenPort_Click);
             // 
