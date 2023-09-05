@@ -131,7 +131,6 @@ namespace PMD {
             comboBoxDisplaySpeed.Items.Add("1.0s");
             comboBoxDisplaySpeed.Items.Add("1.2s");
             comboBoxDisplaySpeed.Items.Add("1.4s");
-            comboBoxDisplaySpeed.Items.Add("1.4s");
 
             comboBoxAveraging.Items.Add("29µs (1 sample)");
             comboBoxAveraging.Items.Add("1.87ms (64 samples)");
