@@ -121,7 +121,7 @@ namespace PMD {
 
             comboBoxOledRotation.Items.Add("0 deg");
             comboBoxOledRotation.Items.Add("180 deg");
-            comboBoxTimeoutAction.SelectedIndex = 0;
+            comboBoxOledRotation.SelectedIndex = 0;
 
             comboBoxDisplaySpeed.Items.Add("0.0s");
             comboBoxDisplaySpeed.Items.Add("0.2s");
