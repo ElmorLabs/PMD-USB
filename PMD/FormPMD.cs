@@ -1157,61 +1157,65 @@ namespace PMD {
                 result = false;
             }
 
-            // Check if we have KTH-USB
-
-            // ID
-            result = PMD_USB_SendCmd(UART_CMD.UART_CMD_READ_ID , 3);
-
-            if (!result || rx_buffer[0] != 0xEE || rx_buffer[1] != 0x0A)
-            {
-                result = MessageBox.Show("Error checking device ID, would you like to continue? If you manually entered bootloader, press OK.", "Error", MessageBoxButtons.OKCancel) == DialogResult.OK;
-            }
-
             if (result)
             {
+                // Check if we have KTH-USB
 
-                // Enter bootloader
-                //MessageBox.Show("Entering bootloader...");
-                PMD_USB_SendCmd(UART_CMD.UART_CMD_BOOTLOADER, 0);
+                // ID
+                result = PMD_USB_SendCmd(UART_CMD.UART_CMD_READ_ID, 3);
 
-                Thread.Sleep(1000);
-
-                // Check bootloader
-
-                int addr = 0x800;
-
-                //MessageBox.Show("Unlocking bootloader...");
-                byte[] tx_buffer = new byte[8];
-                Array.Copy(uint32(addr), 0, tx_buffer, 0, 4);
-                Array.Copy(uint32(fw_data.Length), 0, tx_buffer, 4, 4);
-
-                result = send_request(serial_port, BL_CMD_UNLOCK, uint32(tx_buffer.Length), tx_buffer);
-
-                // Send data
-                for (int i = 0; i < fw_max_size / 256 && result; i++)
+                if (!result || rx_buffer[0] != 0xEE || rx_buffer[1] != 0x0A)
                 {
-                    //Console.Write($"Writing page {i}... ");
-                    tx_buffer = new byte[256 + 4];
-                    Array.Copy(uint32(addr + i * 256), 0, tx_buffer, 0, 4);
-                    Array.Copy(fw_data, i * 256, tx_buffer, 4, 256);
-                    result = send_request(serial_port, BL_CMD_DATA, uint32(tx_buffer.Length), tx_buffer);
-                    
+                    result = MessageBox.Show("Error checking device ID, would you like to continue? If you manually entered bootloader, press OK.", "Error", MessageBoxButtons.OKCancel) == DialogResult.OK;
                 }
 
-                //Console.Write("Resetting device...");
-                tx_buffer = new byte[16];
-                result = send_request(serial_port, BL_CMD_RESET, uint32(tx_buffer.Length), tx_buffer);
+                if (result)
+                {
 
-                Thread.Sleep(1000);
-                
-            }
+                    // Enter bootloader
+                    //MessageBox.Show("Entering bootloader...");
+                    PMD_USB_SendCmd(UART_CMD.UART_CMD_BOOTLOADER, 0);
 
-            if(result)
-            {
-                MessageBox.Show("Update finished. Please replug your device.");
-            } else
-            {
-                MessageBox.Show("Error occurred during update");
+                    Thread.Sleep(1000);
+
+                    // Check bootloader
+
+                    int addr = 0x800;
+
+                    //MessageBox.Show("Unlocking bootloader...");
+                    byte[] tx_buffer = new byte[8];
+                    Array.Copy(uint32(addr), 0, tx_buffer, 0, 4);
+                    Array.Copy(uint32(fw_data.Length), 0, tx_buffer, 4, 4);
+
+                    result = send_request(serial_port, BL_CMD_UNLOCK, uint32(tx_buffer.Length), tx_buffer);
+
+                    // Send data
+                    for (int i = 0; i < fw_max_size / 256 && result; i++)
+                    {
+                        //Console.Write($"Writing page {i}... ");
+                        tx_buffer = new byte[256 + 4];
+                        Array.Copy(uint32(addr + i * 256), 0, tx_buffer, 0, 4);
+                        Array.Copy(fw_data, i * 256, tx_buffer, 4, 256);
+                        result = send_request(serial_port, BL_CMD_DATA, uint32(tx_buffer.Length), tx_buffer);
+
+                    }
+
+                    //Console.Write("Resetting device...");
+                    tx_buffer = new byte[16];
+                    result = send_request(serial_port, BL_CMD_RESET, uint32(tx_buffer.Length), tx_buffer);
+
+                    Thread.Sleep(1000);
+
+                }
+
+                if (result)
+                {
+                    MessageBox.Show("Update finished. Please replug your device.");
+                }
+                else
+                {
+                    MessageBox.Show("Error occurred during update");
+                }
             }
 
             serial_port_mutex.ReleaseMutex();
