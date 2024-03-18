@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
@@ -225,6 +226,8 @@ namespace PMD {
 
         private void UpdateSerialPorts()
         {
+
+            
 
             serial_ports = SerialPort.GetPortNames().ToList();
 
@@ -752,11 +755,11 @@ namespace PMD {
                                 {
                                     RegistryKey key;
                                     key = hwinfo_reg_key.OpenSubKey($"Volt{i}", true);
-                                    key.SetValue("Value", voltage, RegistryValueKind.String);
+                                    key.SetValue("Value", voltage.ToString(CultureInfo.InvariantCulture), RegistryValueKind.String);
                                     key = hwinfo_reg_key.OpenSubKey($"Current{i}", true);
-                                    key.SetValue("Value", current, RegistryValueKind.String);
+                                    key.SetValue("Value", current.ToString(CultureInfo.InvariantCulture), RegistryValueKind.String);
                                     key = hwinfo_reg_key.OpenSubKey($"Power{i}", true);
-                                    key.SetValue("Value", power, RegistryValueKind.String);
+                                    key.SetValue("Value", power.ToString(CultureInfo.InvariantCulture), RegistryValueKind.String);
                                 }
                                 catch { }
                             }
@@ -833,11 +836,72 @@ namespace PMD {
         }
 
         private void buttonBootloader_Click(object sender, EventArgs e) {
+
+            if(serial_port == null)
+            {
+                /*if(serial_ports.Count == 0 || comboBoxPorts.SelectedIndex < 0 || comboBoxPorts.SelectedIndex >= serial_ports.Count)
+                {
+                    return;
+                }
+
+                string com_port = serial_ports[comboBoxPorts.SelectedIndex];
+                DialogResult dialog_result = MessageBox.Show($"Not connected to any device, do you want to try to flash the device at {com_port}?", "Warning", MessageBoxButtons.OKCancel);
+                if (dialog_result != DialogResult.OK)
+                {
+                    return;
+                }
+
+                // Try to open port
+                try
+                {
+
+                    serial_port = new SerialPort(com_port);
+
+                    serial_port.BaudRate = 115200;
+                    serial_port.Parity = Parity.None;
+                    serial_port.StopBits = StopBits.One;
+                    serial_port.DataBits = 8;
+
+                    serial_port.Handshake = Handshake.None;
+                    serial_port.ReadTimeout = 100;
+                    serial_port.WriteTimeout = 100;
+
+                    serial_port.RtsEnable = true;
+                    serial_port.DtrEnable = true;
+
+                    serial_port.DataReceived += Serial_port_DataReceived;
+
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error initializing serial port: " + ex.Message);
+                    serial_port = null;
+                    buttonOpenPort.Text = "Connect";
+                    return;
+                }
+
+                try
+                {
+                    serial_port.Open();
+                    serial_port.DiscardInBuffer();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error opening port: " + ex.Message);
+                    return;
+                }
+
+                UpdateFirmware(false);*/
+                return;
+            }
+
             if(!serial_port_mutex.WaitOne(1000)) {
                 MessageBox.Show("Couldn't get serial port mutex");
                 return;
             }
+
             PMD_USB_SendCmd(UART_CMD.UART_CMD_BOOTLOADER, 0);
+
             serial_port_mutex.ReleaseMutex();
         }
 
@@ -928,7 +992,7 @@ namespace PMD {
                 {
                     if(MessageBox.Show("New firmware version 06 available, would you like to update?", "Notice", MessageBoxButtons.YesNo) == DialogResult.Yes)
                     {
-                        UpdateFirmware();
+                        UpdateFirmware(true);
 
                         // Re-init device
                         ClosePort();
@@ -1010,7 +1074,11 @@ namespace PMD {
         }
 
         private void buttonRefreshPorts_Click(object sender, EventArgs e) {
+            
+            ClosePort();
+
             UpdateSerialPorts();
+
         }
 
         bool csv_logging = false;
@@ -1126,7 +1194,7 @@ namespace PMD {
 
         private const int BL_GUARD = 0x5048434D;
 
-        private void UpdateFirmware()
+        private void UpdateFirmware(bool check_app_mode)
         {
             if (!serial_port_mutex.WaitOne(1000))
             {
@@ -1159,30 +1227,33 @@ namespace PMD {
 
             if (result)
             {
-                // Check if we have KTH-USB
 
-                // ID
-                result = PMD_USB_SendCmd(UART_CMD.UART_CMD_READ_ID, 3);
-
-                if (!result || rx_buffer[0] != 0xEE || rx_buffer[1] != 0x0A)
+                if (check_app_mode)
                 {
-                    result = MessageBox.Show("Error checking device ID, would you like to continue? If you manually entered bootloader, press OK.", "Error", MessageBoxButtons.OKCancel) == DialogResult.OK;
+                    // Check if we have KTH-USB
+                    result = PMD_USB_SendCmd(UART_CMD.UART_CMD_READ_ID, 3);
+
+                    if (!result || rx_buffer[0] != 0xEE || rx_buffer[1] != 0x0A)
+                    {
+                        result = MessageBox.Show("Error checking device ID, would you like to continue? If you manually entered bootloader, press OK.", "Error", MessageBoxButtons.OKCancel) == DialogResult.OK;
+                    }
                 }
 
                 if (result)
                 {
 
                     // Enter bootloader
-                    //MessageBox.Show("Entering bootloader...");
-                    PMD_USB_SendCmd(UART_CMD.UART_CMD_BOOTLOADER, 0);
+                    if (check_app_mode)
+                    {
+                        PMD_USB_SendCmd(UART_CMD.UART_CMD_BOOTLOADER, 0);
 
-                    Thread.Sleep(1000);
+                        Thread.Sleep(1000);
+                    }
 
                     // Check bootloader
 
                     int addr = 0x800;
 
-                    //MessageBox.Show("Unlocking bootloader...");
                     byte[] tx_buffer = new byte[8];
                     Array.Copy(uint32(addr), 0, tx_buffer, 0, 4);
                     Array.Copy(uint32(fw_data.Length), 0, tx_buffer, 4, 4);
@@ -1192,7 +1263,6 @@ namespace PMD {
                     // Send data
                     for (int i = 0; i < fw_max_size / 256 && result; i++)
                     {
-                        //Console.Write($"Writing page {i}... ");
                         tx_buffer = new byte[256 + 4];
                         Array.Copy(uint32(addr + i * 256), 0, tx_buffer, 0, 4);
                         Array.Copy(fw_data, i * 256, tx_buffer, 4, 256);
@@ -1200,7 +1270,6 @@ namespace PMD {
 
                     }
 
-                    //Console.Write("Resetting device...");
                     tx_buffer = new byte[16];
                     result = send_request(serial_port, BL_CMD_RESET, uint32(tx_buffer.Length), tx_buffer);
 
@@ -1307,7 +1376,7 @@ namespace PMD {
                     StopMonitoring();
                     Thread.Sleep(100);
                     serial_port.DiscardInBuffer();
-                    UpdateFirmware();
+                    UpdateFirmware(true);
                     ClosePort();
                     buttonOpenPort_Click(null, null);
                 }
