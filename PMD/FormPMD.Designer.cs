@@ -80,9 +80,12 @@
             this.textBoxEps2Igain = new System.Windows.Forms.TextBox();
             this.buttonFwu = new System.Windows.Forms.Button();
             this.buttonHwinfo = new System.Windows.Forms.Button();
+            this.numericUpDownMonitoringInterval = new System.Windows.Forms.NumericUpDown();
+            this.label16 = new System.Windows.Forms.Label();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel3.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownMonitoringInterval)).BeginInit();
             this.SuspendLayout();
             // 
             // tableLayoutPanel1
@@ -669,11 +672,45 @@
             this.buttonHwinfo.UseVisualStyleBackColor = true;
             this.buttonHwinfo.Click += new System.EventHandler(this.buttonHwinfo_Click);
             // 
+            // numericUpDownMonitoringInterval
+            // 
+            this.numericUpDownMonitoringInterval.Increment = new decimal(new int[] {
+            10,
+            0,
+            0,
+            0});
+            this.numericUpDownMonitoringInterval.Location = new System.Drawing.Point(515, 43);
+            this.numericUpDownMonitoringInterval.Maximum = new decimal(new int[] {
+            5000,
+            0,
+            0,
+            0});
+            this.numericUpDownMonitoringInterval.Name = "numericUpDownMonitoringInterval";
+            this.numericUpDownMonitoringInterval.Size = new System.Drawing.Size(61, 20);
+            this.numericUpDownMonitoringInterval.TabIndex = 22;
+            this.numericUpDownMonitoringInterval.Value = new decimal(new int[] {
+            100,
+            0,
+            0,
+            0});
+            this.numericUpDownMonitoringInterval.ValueChanged += new System.EventHandler(this.numericUpDownMonitoringInterval_ValueChanged);
+            // 
+            // label16
+            // 
+            this.label16.AutoSize = true;
+            this.label16.Location = new System.Drawing.Point(446, 45);
+            this.label16.Name = "label16";
+            this.label16.Size = new System.Drawing.Size(63, 13);
+            this.label16.TabIndex = 23;
+            this.label16.Text = "Update rate";
+            // 
             // FormPMD
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(813, 622);
+            this.Controls.Add(this.label16);
+            this.Controls.Add(this.numericUpDownMonitoringInterval);
             this.Controls.Add(this.buttonHwinfo);
             this.Controls.Add(this.buttonFwu);
             this.Controls.Add(this.tableLayoutPanel2);
@@ -699,7 +736,9 @@
             this.tableLayoutPanel3.PerformLayout();
             this.tableLayoutPanel2.ResumeLayout(false);
             this.tableLayoutPanel2.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownMonitoringInterval)).EndInit();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -760,5 +799,7 @@
         private System.Windows.Forms.TextBox textBoxEps1Igain;
         private System.Windows.Forms.TextBox textBoxEps2Igain;
         private System.Windows.Forms.Label label15;
+        private System.Windows.Forms.NumericUpDown numericUpDownMonitoringInterval;
+        private System.Windows.Forms.Label label16;
     }
 }

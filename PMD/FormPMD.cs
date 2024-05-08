@@ -103,6 +103,8 @@ namespace PMD {
 
         int FirmwareVersion;
 
+        int MonitoringInterval = 100;
+
         public FormPMD() {
 
             InitializeComponent();
@@ -812,7 +814,8 @@ namespace PMD {
                             catch { }
                         }
 
-                        Thread.Sleep(100);
+                        Thread.Sleep(MonitoringInterval);
+
                     }
 
                 }
@@ -1579,6 +1582,22 @@ namespace PMD {
                 buttonHwinfo.Text = "HWInfo";
 
             }
+        }
+
+        private void numericUpDownMonitoringInterval_ValueChanged(object sender, EventArgs e)
+        {
+            int interval = (int)numericUpDownMonitoringInterval.Value;
+            if(interval < 0)
+            {
+                MonitoringInterval = 0;
+            } else if(interval > 5000)
+            {
+                MonitoringInterval = 5000;
+            } else
+            {
+                MonitoringInterval = interval;
+            }
+
         }
     }
 }
