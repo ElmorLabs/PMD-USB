@@ -785,11 +785,6 @@ namespace PMD {
                             data_logger.WriteLine();
                         }
 
-                        if (csv_logging)
-                        {
-                            data_logger.WriteLine();
-                        }
-
                         if (!string.IsNullOrEmpty(WriteToFileName))
                         {
                             try
