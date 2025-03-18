@@ -40,9 +40,13 @@
             this.checkBoxLogTextFile = new System.Windows.Forms.CheckBox();
             this.checkBoxLogCsv = new System.Windows.Forms.CheckBox();
             this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
+            this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
+            this.labelGuidText = new System.Windows.Forms.Label();
+            this.labelGuidValue = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownMonitoringInterval)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownDuration)).BeginInit();
             this.tableLayoutPanel2.SuspendLayout();
+            this.tableLayoutPanel1.SuspendLayout();
             this.SuspendLayout();
             // 
             // labelFwVer
@@ -276,11 +280,46 @@
             this.tableLayoutPanel2.Size = new System.Drawing.Size(400, 120);
             this.tableLayoutPanel2.TabIndex = 30;
             // 
+            // tableLayoutPanel1
+            // 
+            this.tableLayoutPanel1.ColumnCount = 2;
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 50F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.tableLayoutPanel1.Controls.Add(this.labelGuidValue, 1, 0);
+            this.tableLayoutPanel1.Controls.Add(this.labelGuidText, 0, 0);
+            this.tableLayoutPanel1.Location = new System.Drawing.Point(9, 12);
+            this.tableLayoutPanel1.Name = "tableLayoutPanel1";
+            this.tableLayoutPanel1.RowCount = 2;
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
+            this.tableLayoutPanel1.Size = new System.Drawing.Size(350, 40);
+            this.tableLayoutPanel1.TabIndex = 31;
+            // 
+            // labelGuidText
+            // 
+            this.labelGuidText.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.labelGuidText.AutoSize = true;
+            this.labelGuidText.Location = new System.Drawing.Point(12, 3);
+            this.labelGuidText.Name = "labelGuidText";
+            this.labelGuidText.Size = new System.Drawing.Size(26, 13);
+            this.labelGuidText.TabIndex = 0;
+            this.labelGuidText.Text = "UID";
+            // 
+            // labelGuidValue
+            // 
+            this.labelGuidValue.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.labelGuidValue.AutoSize = true;
+            this.labelGuidValue.Location = new System.Drawing.Point(200, 3);
+            this.labelGuidValue.Name = "labelGuidValue";
+            this.labelGuidValue.Size = new System.Drawing.Size(0, 13);
+            this.labelGuidValue.TabIndex = 1;
+            // 
             // FormPMD
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(813, 622);
+            this.Controls.Add(this.tableLayoutPanel1);
             this.Controls.Add(this.tableLayoutPanel2);
             this.Controls.Add(this.panelMonitoring);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
@@ -288,11 +327,14 @@
             this.Name = "FormPMD";
             this.Text = "PMD-USB";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.FormKTH_FormClosing);
+            this.Load += new System.EventHandler(this.FormPMD_Load);
             this.Shown += new System.EventHandler(this.FormPMD_Shown);
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownMonitoringInterval)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownDuration)).EndInit();
             this.tableLayoutPanel2.ResumeLayout(false);
             this.tableLayoutPanel2.PerformLayout();
+            this.tableLayoutPanel1.ResumeLayout(false);
+            this.tableLayoutPanel1.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -314,5 +356,8 @@
         private System.Windows.Forms.CheckBox checkBoxLogTextFile;
         private System.Windows.Forms.CheckBox checkBoxLogCsv;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel2;
+        private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
+        private System.Windows.Forms.Label labelGuidValue;
+        private System.Windows.Forms.Label labelGuidText;
     }
 }

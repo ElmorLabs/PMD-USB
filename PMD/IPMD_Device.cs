@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace PMD
 {
@@ -8,6 +9,7 @@ namespace PMD
         event AllSensorsUpdatedEventHandler AllSensorsUpdated;
 
         int Id { get; }
+        Guid Guid { get; }
         string Name { get; }
         int FirmwareVersion { get; }
         int MonitoringInterval { get; set; }

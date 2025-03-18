@@ -89,6 +89,7 @@ namespace PMD
 
         public string Port { get; private set; }
         public int Id { get; private set; }
+        public Guid Guid { get; private set; } = Guid.Empty;
         public string Name { get; private set; }
         public int FirmwareVersion { get; private set; }
         public int MonitoringInterval { get; set; } = 100;

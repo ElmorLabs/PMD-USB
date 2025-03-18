@@ -174,6 +174,7 @@ namespace PMD
 
         public string Port { get; private set; }
         public int Id { get; private set; }
+        public Guid Guid { get; private set; } = Guid.Empty;
         public string Name { get; private set; }
         public int FirmwareVersion { get; private set; }
         public int MonitoringInterval { get; set; } = 100;
@@ -285,7 +286,6 @@ namespace PMD
             {
                 Thread.Sleep(10);
             }
-            serial_port.Close();
 
             if (timeout != 0)
             {
@@ -293,9 +293,21 @@ namespace PMD
                 string str = System.Text.Encoding.ASCII.GetString(rx_buffer.ToArray()).TrimEnd('\0');
                 if(str.Equals("ElmorLabs PMD2"))
                 {
+                    if(PMD2_SendCmd((byte)USB_CMD.CMD_READ_UID, 12))
+                    {
+                        byte[] guid_buffer = new byte[16];
+                        for(i = 0; i < 12; i++)
+                        {
+                            guid_buffer[i+4] = rx_buffer[11 - i];
+                        }
+                        Guid = new Guid(guid_buffer);
+                    }
+                    serial_port.Close();
                     return;
                 }
             }
+
+            serial_port.Close();
 
             throw new Exception("Device identification failed");
 

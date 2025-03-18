@@ -159,6 +159,7 @@ namespace PMD {
                 checkBoxLogCsv.Enabled = true;
                 checkBoxLogTextFile.Enabled = true;
                 checkBoxLogHwinfo.Enabled = true;
+                labelGuidValue.Text = selectedDevice.Guid.ToString().ToUpper();
 
                 data_logger = new DataLogger(selectedDevice.Name);
 
@@ -341,6 +342,11 @@ namespace PMD {
         private void FormPMD_Shown(object sender, EventArgs e)
         {
             UpdateDeviceList();
+        }
+
+        private void FormPMD_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }
