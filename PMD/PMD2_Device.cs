@@ -66,6 +66,8 @@ namespace PMD
 
         public static int DeviceCounter = 0;
 
+        private static UInt32 MCU_CMD_KEY = 0x0BADC0DE; // Key to unlock MCU CMDs
+
         #endregion
 
         #region Enums
@@ -83,9 +85,19 @@ namespace PMD
             CMD_WRITE_CONFIG,
             CMD_RESET = 0xF0,
             CMD_BOOTLOADER = 0xF1,
-            CMD_NVM_CONFIG = 0xF2,
+            CMD_MCU_CMD = 0xF2,
             CMD_NOP = 0xFF
         }
+
+        private enum MCU_CMD : byte
+        {
+            MCU_CMD_CONFIG_STORE,
+            MCU_CMD_CONFIG_LOAD,
+            MCU_CMD_CONFIG_RESET,
+            MCU_CMD_RESET,
+            MCU_CMD_BOOTLOADER,
+            MCU_CMD_NONE = 0xFF
+        };
 
         public enum AVG : byte
         {
@@ -366,6 +378,33 @@ namespace PMD
 
             return true;
 
+        }
+
+        private bool WriteMcuCmd(MCU_CMD cmd)
+        {
+            // Send command to load NVM
+            byte[] tx_buffer = new byte[6];
+
+            tx_buffer[0] = (byte)USB_CMD.CMD_MCU_CMD;
+            tx_buffer[1] = (byte)(MCU_CMD_KEY & 0xFF); // 32-bit Key to unlock MCU CMDs
+            tx_buffer[2] = (byte)((MCU_CMD_KEY >> 8) & 0xFF);
+            tx_buffer[3] = (byte)((MCU_CMD_KEY >> 16) & 0xFF);
+            tx_buffer[4] = (byte)((MCU_CMD_KEY >> 24) & 0xFF);
+            tx_buffer[5] = (byte)cmd;
+
+            serial_port.Write(tx_buffer, 0, tx_buffer.Length);
+
+            return true;
+        }
+
+        public bool ConfigLoad()
+        {
+            return WriteMcuCmd(MCU_CMD.MCU_CMD_CONFIG_LOAD);
+        }
+
+        public bool ConfigStore()
+        {
+            return WriteMcuCmd(MCU_CMD.MCU_CMD_CONFIG_STORE);
         }
 
         private void Serial_port_DataReceived(object sender, SerialDataReceivedEventArgs e)

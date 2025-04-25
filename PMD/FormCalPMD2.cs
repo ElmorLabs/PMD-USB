@@ -197,5 +197,34 @@ namespace PMD
                 return;
             }
         }
+
+        private void buttonLoad_Click(object sender, EventArgs e)
+        {
+            if (!pmd2_device.ConfigLoad())
+            {
+                MessageBox.Show("Failed to write device configuration");
+                return;
+            }
+
+            System.Threading.Thread.Sleep(100);
+
+            // Re-read the config
+            buttonRead_Click(null, null);
+        }
+
+        private void buttonStore_Click(object sender, EventArgs e)
+        {
+            if(!pmd2_device.ConfigStore())
+            {
+                MessageBox.Show("Failed to write device configuration");
+                return;
+            }
+
+            System.Threading.Thread.Sleep(100);
+
+            // Re-load the config
+            buttonLoad_Click(null, null);
+        }
+
     }
 }

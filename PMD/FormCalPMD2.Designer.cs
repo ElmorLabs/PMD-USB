@@ -664,6 +664,7 @@
             this.buttonLoad.TabIndex = 23;
             this.buttonLoad.Text = "Load";
             this.buttonLoad.UseVisualStyleBackColor = true;
+            this.buttonLoad.Click += new System.EventHandler(this.buttonLoad_Click);
             // 
             // buttonStore
             // 
@@ -673,6 +674,7 @@
             this.buttonStore.TabIndex = 24;
             this.buttonStore.Text = "Store";
             this.buttonStore.UseVisualStyleBackColor = true;
+            this.buttonStore.Click += new System.EventHandler(this.buttonStore_Click);
             // 
             // FormCalPMD2
             // 
