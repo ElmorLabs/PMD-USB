@@ -7,14 +7,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static PMD.PMD2_Device;
 
 namespace PMD
 {
+    using DeviceConfigStruct = DeviceConfigStructV1; // Use V1 as the current version
+
     public partial class FormCalPMD2 : Form
     {
 
         PMD2_Device pmd2_device;
-        PMD2_Device.DeviceConfigStruct deviceConfig;
+        DeviceConfigStruct deviceConfig;
 
         public FormCalPMD2(PMD2_Device pmd2_device)
         {

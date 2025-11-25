@@ -5,9 +5,14 @@ using System.Diagnostics;
 using System.IO.Ports;
 using System.Runtime.InteropServices;
 using System.Threading;
+using static PMD.PMD2_Device;
+
 
 namespace PMD
 {
+    
+    using DeviceConfigStruct = DeviceConfigStructV1; // Use V1 as the current version
+
     public class PMD2_Device : IPMD_Device
     {
 
@@ -127,6 +132,11 @@ namespace PMD
             OCP_SCALE_NUM
         }
 
+        public enum DISPLAY_ROTATION : byte {
+            DISPLAY_ROTATION_0,
+            DISPLAY_ROTATION_180
+        }
+
 #endregion
 
         private const int SENSOR_POWER_NUM = 10;
@@ -167,7 +177,7 @@ namespace PMD
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        public struct DeviceConfigStruct
+        public struct DeviceConfigStructV0
         {
             public byte Version;               // uint8_t corresponds to C# byte
             public UInt16 Crc;                 // uint16_t corresponds to C# ushort
@@ -176,6 +186,19 @@ namespace PMD
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_POWER_NUM)] public byte[] OcpPerChannel;       // Arrays for SENSOR_POWER_NUM
             public CalibrationStruct Calibration;
         }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct DeviceConfigStructV1
+        {
+            public byte Version;               // uint8_t corresponds to C# byte
+            public UInt16 Crc;                 // uint16_t corresponds to C# ushort
+            public AVG Average;
+            public OCP_SCALE OcpScale;
+            public DISPLAY_ROTATION DisplayRotation;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_POWER_NUM)] public byte[] OcpPerChannel;       // Arrays for SENSOR_POWER_NUM
+            public CalibrationStruct Calibration;
+        }
+
         #endregion
 
         private const string STM32_USB_SERIAL_REGKEY = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_0483&PID_5740";
@@ -305,7 +328,21 @@ namespace PMD
                 string str = System.Text.Encoding.ASCII.GetString(rx_buffer.ToArray()).TrimEnd('\0');
                 if(str.Equals("ElmorLabs PMD2"))
                 {
-                    if(PMD2_SendCmd((byte)USB_CMD.CMD_READ_UID, 12))
+                    // Read vendor data
+                    if(PMD2_SendCmd((byte)USB_CMD.CMD_READ_VENDOR_DATA, 3))
+                    {
+                        byte vid = rx_buffer[0];
+                        byte pid = rx_buffer[1];
+                        byte fw = rx_buffer[2];
+
+                        if(vid != 0xEE || pid != 0x15)
+                        {
+                            serial_port.Close();
+                            throw new Exception("Device identification failed (VID/PID mismatch)");
+                        }
+                        FirmwareVersion = fw;
+                    }
+                    if (PMD2_SendCmd((byte)USB_CMD.CMD_READ_UID, 12))
                     {
                         byte[] guid_buffer = new byte[16];
                         for(i = 0; i < 12; i++)
@@ -313,6 +350,7 @@ namespace PMD
                             guid_buffer[i+4] = rx_buffer[11 - i];
                         }
                         Guid = new Guid(guid_buffer);
+
                     }
                     serial_port.Close();
                     return;
@@ -332,6 +370,11 @@ namespace PMD
 
             // Get device config
             int config_struct_size = Marshal.SizeOf(typeof(DeviceConfigStruct));
+
+            if(FirmwareVersion < 2)
+            {
+                config_struct_size = Marshal.SizeOf(typeof(DeviceConfigStructV0));
+            }
             bool result = PMD2_SendCmd((byte)USB_CMD.CMD_READ_CONFIG, config_struct_size);
 
             if (result)
@@ -342,14 +385,36 @@ namespace PMD
                     buffer = rx_buffer.ToArray();
                 }
 
-                try
+                if (FirmwareVersion < 2)
                 {
-                    GCHandle handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
-                    deviceConfig = (DeviceConfigStruct)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), typeof(DeviceConfigStruct));
-                    handle.Free();
-                    return true;
+                    // DeviceConfigStructV0 conversion
+                    try
+                    {
+                        GCHandle handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+                        DeviceConfigStructV0 deviceConfigV0 = (DeviceConfigStructV0)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), typeof(DeviceConfigStructV0));
+                        handle.Free();
+                        deviceConfig.Version = deviceConfig.Version;
+                        deviceConfig.Crc = deviceConfigV0.Crc;
+                        deviceConfig.Average = deviceConfigV0.Average;
+                        deviceConfig.OcpScale = deviceConfigV0.OcpScale;
+                        deviceConfig.DisplayRotation = DISPLAY_ROTATION.DISPLAY_ROTATION_0; // Default value for V0
+                        deviceConfig.OcpPerChannel = deviceConfigV0.OcpPerChannel;
+                        deviceConfig.Calibration = deviceConfigV0.Calibration;
+                        return true;
+                    }
+                    catch { }
                 }
-                catch { }
+                else
+                {
+                    try
+                    {
+                        GCHandle handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+                        deviceConfig = (DeviceConfigStruct)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), typeof(DeviceConfigStruct));
+                        handle.Free();
+                        return true;
+                    }
+                    catch { }
+                }
             }
             
             return false;
@@ -358,12 +423,36 @@ namespace PMD
 
         public bool WriteConfig(DeviceConfigStruct deviceConfig)
         {
-
             int config_struct_size = Marshal.SizeOf(typeof(DeviceConfigStruct));
-            byte[] buffer = new byte[config_struct_size];
-            GCHandle handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
-            Marshal.StructureToPtr(deviceConfig, handle.AddrOfPinnedObject(), false);
-            handle.Free();
+            byte[] buffer;
+
+            if (FirmwareVersion < 2)
+            {
+                // DeviceConfigStructV0 conversion
+                DeviceConfigStructV0 deviceConfigV0 = new DeviceConfigStructV0();
+                deviceConfigV0.Version = 0;
+                deviceConfigV0.Average = deviceConfig.Average;
+                deviceConfigV0.OcpScale = deviceConfig.OcpScale;
+                deviceConfigV0.OcpPerChannel = deviceConfig.OcpPerChannel;
+                deviceConfigV0.Calibration = deviceConfig.Calibration;
+                config_struct_size = Marshal.SizeOf(typeof(DeviceConfigStructV0));
+
+                buffer = new byte[config_struct_size];
+
+                GCHandle handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+                Marshal.StructureToPtr(deviceConfigV0, handle.AddrOfPinnedObject(), false);
+                handle.Free();
+
+            } else {
+
+                config_struct_size = Marshal.SizeOf(typeof(DeviceConfigStruct));
+                buffer = new byte[config_struct_size];
+                GCHandle handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+                Marshal.StructureToPtr(deviceConfig, handle.AddrOfPinnedObject(), false);
+                handle.Free();
+
+            }
+
 
             // Send 62 bytes each time
             for (int i = 0; i < config_struct_size; i += 62)

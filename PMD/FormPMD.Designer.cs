@@ -41,8 +41,8 @@
             this.checkBoxLogCsv = new System.Windows.Forms.CheckBox();
             this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
-            this.labelGuidText = new System.Windows.Forms.Label();
             this.labelGuidValue = new System.Windows.Forms.Label();
+            this.labelGuidText = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownMonitoringInterval)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownDuration)).BeginInit();
             this.tableLayoutPanel2.SuspendLayout();
@@ -206,7 +206,7 @@
             this.buttonDevice.Name = "buttonDevice";
             this.buttonDevice.Size = new System.Drawing.Size(75, 23);
             this.buttonDevice.TabIndex = 26;
-            this.buttonDevice.Text = "Device Cfg";
+            this.buttonDevice.Text = "CAL";
             this.buttonDevice.UseVisualStyleBackColor = true;
             this.buttonDevice.Click += new System.EventHandler(this.buttonCal_Click);
             // 
@@ -295,6 +295,15 @@
             this.tableLayoutPanel1.Size = new System.Drawing.Size(350, 40);
             this.tableLayoutPanel1.TabIndex = 31;
             // 
+            // labelGuidValue
+            // 
+            this.labelGuidValue.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.labelGuidValue.AutoSize = true;
+            this.labelGuidValue.Location = new System.Drawing.Point(200, 3);
+            this.labelGuidValue.Name = "labelGuidValue";
+            this.labelGuidValue.Size = new System.Drawing.Size(0, 13);
+            this.labelGuidValue.TabIndex = 1;
+            // 
             // labelGuidText
             // 
             this.labelGuidText.Anchor = System.Windows.Forms.AnchorStyles.None;
@@ -304,15 +313,6 @@
             this.labelGuidText.Size = new System.Drawing.Size(26, 13);
             this.labelGuidText.TabIndex = 0;
             this.labelGuidText.Text = "UID";
-            // 
-            // labelGuidValue
-            // 
-            this.labelGuidValue.Anchor = System.Windows.Forms.AnchorStyles.None;
-            this.labelGuidValue.AutoSize = true;
-            this.labelGuidValue.Location = new System.Drawing.Point(200, 3);
-            this.labelGuidValue.Name = "labelGuidValue";
-            this.labelGuidValue.Size = new System.Drawing.Size(0, 13);
-            this.labelGuidValue.TabIndex = 1;
             // 
             // FormPMD
             // 
