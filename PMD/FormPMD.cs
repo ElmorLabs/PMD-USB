@@ -82,6 +82,7 @@ namespace PMD {
             {
                 deviceList.Clear();
 
+                deviceList.AddRange(PMD2X_Device.GetAllDevices());
                 deviceList.AddRange(PMD2_Device.GetAllDevices());
                 deviceList.AddRange(PMD_USB_Device.GetAllDevices());
 
@@ -336,6 +337,11 @@ namespace PMD {
             {
                 FormCalPMD2 formCalPMD2 = new FormCalPMD2(pmd2_device);
                 formCalPMD2.Show();
+            }
+            else if(selectedDevice is PMD2X_Device pmd2x_device)
+            {
+                FormCalPMD2X formCalPMD2X = new FormCalPMD2X(pmd2x_device);
+                formCalPMD2X.Show();
             }
         }
 
