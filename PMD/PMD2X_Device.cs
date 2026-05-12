@@ -184,6 +184,7 @@ namespace PMD
             public UInt16 Crc;                 // uint16_t corresponds to C# ushort
             public AVG Average;
             public OCP_SCALE OcpScale;
+            DISPLAY_ROTATION DisplayRotation;
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_POWER_NUM)] public byte[] OcpPerChannel;       // Arrays for SENSOR_POWER_NUM
             public CalibrationStruct Calibration;
         }
