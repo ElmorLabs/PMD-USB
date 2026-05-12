@@ -690,7 +690,7 @@
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "FormCalPMD2X";
-            this.Text = "PMD2 Calibration";
+            this.Text = "PMD2X Calibration";
             this.tableLayoutPanel2.ResumeLayout(false);
             this.tableLayoutPanel2.PerformLayout();
             this.ResumeLayout(false);
