@@ -18,9 +18,11 @@ namespace PMD
         private readonly TextBox[] hpwrWireCurrentGainTextBoxes = new TextBox[6];
         private readonly TextBox[] hpwrWireCurrentOffsetTextBoxes = new TextBox[6];
 
+        private static readonly int[] EditableRailIndices = { 0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+
         private static readonly string[] RailNames = new[]
         {
-            "ATX 12V", "ATX 5V", "ATX 5VSB", "ATX 3V3", "HPWR", "EPS1", "EPS2", "PCIE1", "PCIE2", "PCIE3",
+            "ATX 12V", "ATX 5V", "ATX 5VSB", "ATX 3V3", "EPS1", "EPS2", "PCIE1", "PCIE2", "PCIE3",
             "HPWR W1", "HPWR W2", "HPWR W3", "HPWR W4", "HPWR W5", "HPWR W6"
         };
 
@@ -28,7 +30,22 @@ namespace PMD
         {
             InitializeComponent();
             this.pmd2_device = pmd2_device;
+            HideAggregateHpwrRail();
             AddAdditionalRails();
+        }
+
+        private void HideAggregateHpwrRail()
+        {
+            label17.Visible = false;
+            textBoxHpwrVgain.Visible = false;
+            textBoxHpwrVoffset.Visible = false;
+            textBoxHpwrIgain.Visible = false;
+            textBoxHpwrIoffset.Visible = false;
+
+            if (tableLayoutPanel2.RowStyles.Count > 6)
+            {
+                tableLayoutPanel2.RowStyles[6].Height = 0F;
+            }
         }
 
         private void AddAdditionalRails()
@@ -81,7 +98,7 @@ namespace PMD
         {
             return new[]
             {
-                textBoxAtx12Vgain, textBoxAtx5Vgain, textBoxAtx5sbVgain, textBoxAtx3Vgain, textBoxHpwrVgain,
+                textBoxAtx12Vgain, textBoxAtx5Vgain, textBoxAtx5sbVgain, textBoxAtx3Vgain,
                 textBoxEps1Vgain, textBoxEps2Vgain, textBoxPcie1Vgain, textBoxPcie2Vgain, textBoxPcie3Vgain,
                 hpwrWireVoltageGainTextBoxes[0], hpwrWireVoltageGainTextBoxes[1], hpwrWireVoltageGainTextBoxes[2],
                 hpwrWireVoltageGainTextBoxes[3], hpwrWireVoltageGainTextBoxes[4], hpwrWireVoltageGainTextBoxes[5]
@@ -92,7 +109,7 @@ namespace PMD
         {
             return new[]
             {
-                textBoxAtx12Voffset, textBoxAtx5Voffset, textBoxAtx5sbVoffset, textBoxAtx3Voffset, textBoxHpwrVoffset,
+                textBoxAtx12Voffset, textBoxAtx5Voffset, textBoxAtx5sbVoffset, textBoxAtx3Voffset,
                 textBoxEps1Voffset, textBoxEps2Voffset, textBoxPcie1Voffset, textBoxPcie2Voffset, textBoxPcie3Voffset,
                 hpwrWireVoltageOffsetTextBoxes[0], hpwrWireVoltageOffsetTextBoxes[1], hpwrWireVoltageOffsetTextBoxes[2],
                 hpwrWireVoltageOffsetTextBoxes[3], hpwrWireVoltageOffsetTextBoxes[4], hpwrWireVoltageOffsetTextBoxes[5]
@@ -103,7 +120,7 @@ namespace PMD
         {
             return new[]
             {
-                textBoxAtx12Igain, textBoxAtx5Igain, textBoxAtx5sbIgain, textBoxAtx3Igain, textBoxHpwrIgain,
+                textBoxAtx12Igain, textBoxAtx5Igain, textBoxAtx5sbIgain, textBoxAtx3Igain,
                 textBoxEps1Igain, textBoxEps2Igain, textBoxPcie1Igain, textBoxPcie2Igain, textBoxPcie3Igain,
                 hpwrWireCurrentGainTextBoxes[0], hpwrWireCurrentGainTextBoxes[1], hpwrWireCurrentGainTextBoxes[2],
                 hpwrWireCurrentGainTextBoxes[3], hpwrWireCurrentGainTextBoxes[4], hpwrWireCurrentGainTextBoxes[5]
@@ -114,7 +131,7 @@ namespace PMD
         {
             return new[]
             {
-                textBoxAtx12Ioffset, textBoxAtx5Ioffset, textBoxAtx5sbIoffset, textBoxAtx3Ioffset, textBoxHpwrIoffset,
+                textBoxAtx12Ioffset, textBoxAtx5Ioffset, textBoxAtx5sbIoffset, textBoxAtx3Ioffset,
                 textBoxEps1Ioffset, textBoxEps2Ioffset, textBoxPcie1Ioffset, textBoxPcie2Ioffset, textBoxPcie3Ioffset,
                 hpwrWireCurrentOffsetTextBoxes[0], hpwrWireCurrentOffsetTextBoxes[1], hpwrWireCurrentOffsetTextBoxes[2],
                 hpwrWireCurrentOffsetTextBoxes[3], hpwrWireCurrentOffsetTextBoxes[4], hpwrWireCurrentOffsetTextBoxes[5]
@@ -134,14 +151,15 @@ namespace PMD
             TextBox[] currentGainTextBoxes = GetCurrentGainTextBoxes();
             TextBox[] currentOffsetTextBoxes = GetCurrentOffsetTextBoxes();
 
-            int railCount = Math.Min(Math.Min(deviceConfig.Calibration.PowerReadingVoltage.Length, deviceConfig.Calibration.PowerReadingCurrent.Length), RailNames.Length);
+            int railCount = Math.Min(Math.Min(deviceConfig.Calibration.PowerReadingVoltage.Length, deviceConfig.Calibration.PowerReadingCurrent.Length), EditableRailIndices.Length);
 
             for (int i = 0; i < railCount; i++)
             {
-                voltageGainTextBoxes[i].Text = deviceConfig.Calibration.PowerReadingVoltage[i].GainOffset.ToString();
-                voltageOffsetTextBoxes[i].Text = deviceConfig.Calibration.PowerReadingVoltage[i].Offset.ToString();
-                currentGainTextBoxes[i].Text = deviceConfig.Calibration.PowerReadingCurrent[i].GainOffset.ToString();
-                currentOffsetTextBoxes[i].Text = deviceConfig.Calibration.PowerReadingCurrent[i].Offset.ToString();
+                int railIndex = EditableRailIndices[i];
+                voltageGainTextBoxes[i].Text = deviceConfig.Calibration.PowerReadingVoltage[railIndex].GainOffset.ToString();
+                voltageOffsetTextBoxes[i].Text = deviceConfig.Calibration.PowerReadingVoltage[railIndex].Offset.ToString();
+                currentGainTextBoxes[i].Text = deviceConfig.Calibration.PowerReadingCurrent[railIndex].GainOffset.ToString();
+                currentOffsetTextBoxes[i].Text = deviceConfig.Calibration.PowerReadingCurrent[railIndex].Offset.ToString();
             }
 
         }
@@ -159,7 +177,7 @@ namespace PMD
             TextBox[] currentGainTextBoxes = GetCurrentGainTextBoxes();
             TextBox[] currentOffsetTextBoxes = GetCurrentOffsetTextBoxes();
 
-            int railCount = Math.Min(Math.Min(deviceConfig.Calibration.PowerReadingVoltage.Length, deviceConfig.Calibration.PowerReadingCurrent.Length), RailNames.Length);
+            int railCount = Math.Min(Math.Min(deviceConfig.Calibration.PowerReadingVoltage.Length, deviceConfig.Calibration.PowerReadingCurrent.Length), EditableRailIndices.Length);
 
             for (int i = 0; i < railCount; i++)
             {
@@ -172,10 +190,11 @@ namespace PMD
                     return;
                 }
 
-                deviceConfig.Calibration.PowerReadingVoltage[i].GainOffset = vGain;
-                deviceConfig.Calibration.PowerReadingVoltage[i].Offset = vOffset;
-                deviceConfig.Calibration.PowerReadingCurrent[i].GainOffset = iGain;
-                deviceConfig.Calibration.PowerReadingCurrent[i].Offset = iOffset;
+                int railIndex = EditableRailIndices[i];
+                deviceConfig.Calibration.PowerReadingVoltage[railIndex].GainOffset = vGain;
+                deviceConfig.Calibration.PowerReadingVoltage[railIndex].Offset = vOffset;
+                deviceConfig.Calibration.PowerReadingCurrent[railIndex].GainOffset = iGain;
+                deviceConfig.Calibration.PowerReadingCurrent[railIndex].Offset = iOffset;
             }
 
             if (!pmd2_device.WriteConfig(deviceConfig))
