@@ -7,11 +7,10 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using static PMD.PMD2X_Device;
 
-
 namespace PMD
 {
     
-    using DeviceConfigStruct = DeviceConfigStructV0; // Use V0 as the current version
+    using DeviceConfigStruct = DeviceConfigStructV2; // Use V2 as the current version
 
     public class PMD2X_Device : IPMD_Device
     {
@@ -136,6 +135,14 @@ namespace PMD
             DISPLAY_ROTATION_180
         }
 
+        public enum DISPLAY_TIMEOUT : byte
+        {
+            DISPLAY_TIMEOUT_DISABLED,
+            DISPLAY_TIMEOUT_CYCLE,
+            DISPLAY_TIMEOUT_OFF,
+            DISPLAY_TIMEOUT_NUM
+        }
+
         #endregion
 
         private const int SENSOR_POWER_NUM = 16;
@@ -184,7 +191,31 @@ namespace PMD
             public UInt16 Crc;                 // uint16_t corresponds to C# ushort
             public AVG Average;
             public OCP_SCALE OcpScale;
-            DISPLAY_ROTATION DisplayRotation;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_POWER_NUM)] public byte[] OcpPerChannel;       // Arrays for SENSOR_POWER_NUM
+            public CalibrationStruct Calibration;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct DeviceConfigStructV1
+        {
+            public byte Version;               // uint8_t corresponds to C# byte
+            public UInt16 Crc;                 // uint16_t corresponds to C# ushort
+            public AVG Average;
+            public OCP_SCALE OcpScale;
+            public DISPLAY_ROTATION DisplayRotation;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_POWER_NUM)] public byte[] OcpPerChannel;       // Arrays for SENSOR_POWER_NUM
+            public CalibrationStruct Calibration;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct DeviceConfigStructV2
+        {
+            public byte Version;               // uint8_t corresponds to C# byte
+            public UInt16 Crc;                 // uint16_t corresponds to C# ushort
+            public AVG Average;
+            public OCP_SCALE OcpScale;
+            public DISPLAY_ROTATION DisplayRotation;
+            public DISPLAY_TIMEOUT DisplayTimeout;
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_POWER_NUM)] public byte[] OcpPerChannel;       // Arrays for SENSOR_POWER_NUM
             public CalibrationStruct Calibration;
         }
@@ -366,18 +397,24 @@ namespace PMD
 
             deviceConfig = new DeviceConfigStruct();
 
-            // Get device config
-            int config_struct_size = Marshal.SizeOf(typeof(DeviceConfigStruct));
-
-            if(FirmwareVersion < 2)
+            // Try newest config first, then fall back to older layouts.
+            int[] configSizes = new[]
             {
-                config_struct_size = Marshal.SizeOf(typeof(DeviceConfigStructV0));
-            }
-            bool result = PMD2_SendCmd((byte)USB_CMD.CMD_READ_CONFIG, config_struct_size);
+                Marshal.SizeOf(typeof(DeviceConfigStructV2)),
+                Marshal.SizeOf(typeof(DeviceConfigStructV1)),
+                Marshal.SizeOf(typeof(DeviceConfigStructV0))
+            };
 
-            if (result)
+            foreach (int config_struct_size in configSizes)
             {
-                byte[] buffer = null;
+                bool result = PMD2_SendCmd((byte)USB_CMD.CMD_READ_CONFIG, config_struct_size);
+
+                if (!result)
+                {
+                    continue;
+                }
+
+                byte[] buffer;
                 lock (rx_buffer)
                 {
                     buffer = rx_buffer.ToArray();
@@ -385,8 +422,38 @@ namespace PMD
 
                 try
                 {
+                    byte configVersion = buffer[0];
                     GCHandle handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
-                    deviceConfig = (DeviceConfigStruct)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), typeof(DeviceConfigStruct));
+
+                    if (configVersion >= 2 && buffer.Length >= Marshal.SizeOf(typeof(DeviceConfigStructV2)))
+                    {
+                        deviceConfig = (DeviceConfigStruct)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), typeof(DeviceConfigStruct));
+                    }
+                    else if (configVersion >= 1 && buffer.Length >= Marshal.SizeOf(typeof(DeviceConfigStructV1)))
+                    {
+                        DeviceConfigStructV1 deviceConfigV1 = (DeviceConfigStructV1)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), typeof(DeviceConfigStructV1));
+                        deviceConfig.Version = deviceConfigV1.Version;
+                        deviceConfig.Crc = deviceConfigV1.Crc;
+                        deviceConfig.Average = deviceConfigV1.Average;
+                        deviceConfig.OcpScale = deviceConfigV1.OcpScale;
+                        deviceConfig.DisplayRotation = deviceConfigV1.DisplayRotation;
+                        deviceConfig.DisplayTimeout = DISPLAY_TIMEOUT.DISPLAY_TIMEOUT_DISABLED;
+                        deviceConfig.OcpPerChannel = deviceConfigV1.OcpPerChannel;
+                        deviceConfig.Calibration = deviceConfigV1.Calibration;
+                    }
+                    else
+                    {
+                        DeviceConfigStructV0 deviceConfigV0 = (DeviceConfigStructV0)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), typeof(DeviceConfigStructV0));
+                        deviceConfig.Version = deviceConfigV0.Version;
+                        deviceConfig.Crc = deviceConfigV0.Crc;
+                        deviceConfig.Average = deviceConfigV0.Average;
+                        deviceConfig.OcpScale = deviceConfigV0.OcpScale;
+                        deviceConfig.DisplayRotation = DISPLAY_ROTATION.DISPLAY_ROTATION_0;
+                        deviceConfig.DisplayTimeout = DISPLAY_TIMEOUT.DISPLAY_TIMEOUT_DISABLED;
+                        deviceConfig.OcpPerChannel = deviceConfigV0.OcpPerChannel;
+                        deviceConfig.Calibration = deviceConfigV0.Calibration;
+                    }
+
                     handle.Free();
                     return true;
                 }
@@ -402,11 +469,49 @@ namespace PMD
             int config_struct_size = Marshal.SizeOf(typeof(DeviceConfigStruct));
             byte[] buffer;
 
-            config_struct_size = Marshal.SizeOf(typeof(DeviceConfigStruct));
-            buffer = new byte[config_struct_size];
-            GCHandle handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
-            Marshal.StructureToPtr(deviceConfig, handle.AddrOfPinnedObject(), false);
-            handle.Free();
+            if (deviceConfig.Version < 1)
+            {
+                // DeviceConfigStructV0 conversion
+                DeviceConfigStructV0 deviceConfigV0 = new DeviceConfigStructV0();
+                deviceConfigV0.Version = 0;
+                deviceConfigV0.Average = deviceConfig.Average;
+                deviceConfigV0.OcpScale = deviceConfig.OcpScale;
+                deviceConfigV0.OcpPerChannel = deviceConfig.OcpPerChannel;
+                deviceConfigV0.Calibration = deviceConfig.Calibration;
+                config_struct_size = Marshal.SizeOf(typeof(DeviceConfigStructV0));
+
+                buffer = new byte[config_struct_size];
+
+                GCHandle handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+                Marshal.StructureToPtr(deviceConfigV0, handle.AddrOfPinnedObject(), false);
+                handle.Free();
+            }
+            else if (deviceConfig.Version < 2)
+            {
+                // DeviceConfigStructV1 conversion
+                DeviceConfigStructV1 deviceConfigV1 = new DeviceConfigStructV1();
+                deviceConfigV1.Version = 1;
+                deviceConfigV1.Average = deviceConfig.Average;
+                deviceConfigV1.OcpScale = deviceConfig.OcpScale;
+                deviceConfigV1.DisplayRotation = deviceConfig.DisplayRotation;
+                deviceConfigV1.OcpPerChannel = deviceConfig.OcpPerChannel;
+                deviceConfigV1.Calibration = deviceConfig.Calibration;
+                config_struct_size = Marshal.SizeOf(typeof(DeviceConfigStructV1));
+
+                buffer = new byte[config_struct_size];
+
+                GCHandle handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+                Marshal.StructureToPtr(deviceConfigV1, handle.AddrOfPinnedObject(), false);
+                handle.Free();
+            }
+            else
+            {
+                config_struct_size = Marshal.SizeOf(typeof(DeviceConfigStruct));
+                buffer = new byte[config_struct_size];
+                GCHandle handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+                Marshal.StructureToPtr(deviceConfig, handle.AddrOfPinnedObject(), false);
+                handle.Free();
+            }
 
             // Send 62 bytes each time
             for (int i = 0; i < config_struct_size; i += 62)

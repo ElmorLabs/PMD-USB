@@ -5,7 +5,7 @@ using static PMD.PMD2X_Device;
 
 namespace PMD
 {
-    using DeviceConfigStruct = DeviceConfigStructV0; // Use V0 as the current version
+    using DeviceConfigStruct = DeviceConfigStructV2; // Use V2 as the current version
 
     public partial class FormCalPMD2X : Form
     {
