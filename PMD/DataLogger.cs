@@ -132,10 +132,6 @@ namespace PMD
                     if (hwinfo_reg_key == null)
                     {
                         hwinfo_reg_key = Registry.CurrentUser.CreateSubKey(HWINFO_REG_KEY, true);
-                    } else
-                    {
-                        // Clear old entries
-                        RemoveHwinfoRegEntry();
                     }
                 }
                 catch (Exception ex)
