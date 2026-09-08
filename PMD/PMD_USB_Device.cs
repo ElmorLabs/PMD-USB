@@ -1,5 +1,4 @@
-﻿using Microsoft.Win32;
-using PMD;
+﻿using PMD;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,47 +15,19 @@ namespace PMD
 
             List<PMD_USB_Device> device_list = new List<PMD_USB_Device>();
 
-            // Open registry to find matching CH340 USB-Serial ports
-            RegistryKey masterRegKey = null;
-
-            try
+            List<string> candidatePorts = Win32SetupApiComPortFinder.FindCandidatePorts(CH340_VID, CH340_PID);
+            foreach (string candidatePort in candidatePorts)
             {
-                masterRegKey = Registry.LocalMachine.OpenSubKey(CH340_REGKEY);
-                if(masterRegKey == null)
-                {
-                    throw new Exception("Couldn't open registry key CH340_REGKEY:" + CH340_REGKEY);
-                }
-            }
-            catch
-            {
-                return device_list;
-            }
-
-            foreach (string subKey in masterRegKey.GetSubKeyNames())
-            {
-                // Name must contain either VCP or Serial to be valid. Process any entries NOT matching
-                // Compare to subKey (name of RegKey entry)
                 try
                 {
-                    RegistryKey subRegKey = masterRegKey.OpenSubKey($"{subKey}\\Device Parameters");
-                    if (subRegKey == null) continue;
-
-                    if (subRegKey.GetValueKind("PortName") != RegistryValueKind.String) continue;
-
-                    string value = (string)subRegKey.GetValue("PortName");
-
-                    if (value != null)
-                    {
-                        PMD_USB_Device pmd_usb_device = new PMD_USB_Device(value, speed);
-                        device_list.Add(pmd_usb_device);
-                    }
+                    PMD_USB_Device pmd_usb_device = new PMD_USB_Device(candidatePort, speed);
+                    device_list.Add(pmd_usb_device);
                 }
                 catch
                 {
                     continue;
                 }
             }
-            masterRegKey.Close();
 
             return device_list;
 
@@ -79,7 +50,8 @@ namespace PMD
             UART_CMD_NOP = 0xFF
         };
 
-        private const string CH340_REGKEY = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_1A86&PID_7523";
+        private const ushort CH340_VID = 0x1A86;
+        private const ushort CH340_PID = 0x7523;
         private const byte PMD_USB_VID = 0xEE;
         private const byte PMD_USB_PID = 0x0A;
 

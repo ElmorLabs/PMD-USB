@@ -118,6 +118,7 @@
     <Compile Include="PMD2X_Device.cs" />
     <Compile Include="PMD2_Device.cs" />
     <Compile Include="PMD_USB_Device.cs" />
+    <Compile Include="Win32SetupApiComPortFinder.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Sensor.cs" />

@@ -1,5 +1,4 @@
-﻿using Microsoft.Win32;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Ports;
@@ -24,46 +23,18 @@ namespace PMD
 
             List<PMD2_Device> device_list = new List<PMD2_Device>();
 
-            // Open registry to find matching STM32 USB-Serial ports
-            RegistryKey masterRegKey = null;
-
-            try
+            List<string> candidatePorts = Win32SetupApiComPortFinder.FindCandidatePorts(STM32_USB_SERIAL_VID, STM32_USB_SERIAL_PID);
+            foreach (string candidatePort in candidatePorts)
             {
-                masterRegKey = Registry.LocalMachine.OpenSubKey(STM32_USB_SERIAL_REGKEY);
-                if (masterRegKey == null)
-                {
-                    throw new Exception("Couldn't open registry key STM32_USB_SERIAL_REGKEY:" + STM32_USB_SERIAL_REGKEY);
-                }
-            }
-            catch
-            {
-                return device_list;
-            }
-
-            foreach (string subKey in masterRegKey.GetSubKeyNames())
-            {
-                // Name must contain either VCP or Serial to be valid. Process any entries NOT matching
-                // Compare to subKey (name of RegKey entry)
                 try
                 {
-                    RegistryKey subRegKey = masterRegKey.OpenSubKey($"{subKey}\\Device Parameters");
-                    if (subRegKey == null) continue;
-
-                    if (subRegKey.GetValueKind("PortName") != RegistryValueKind.String) continue;
-
-                    string value = (string)subRegKey.GetValue("PortName");
-
-                    if (value != null)
-                    {
-                        device_list.Add(new PMD2_Device(value));
-                    }
+                    device_list.Add(new PMD2_Device(candidatePort));
                 }
                 catch
                 {
                     continue;
                 }
             }
-            masterRegKey.Close();
 
             return device_list;
 
@@ -201,7 +172,8 @@ namespace PMD
 
         #endregion
 
-        private const string STM32_USB_SERIAL_REGKEY = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_0483&PID_5740";
+        private const ushort STM32_USB_SERIAL_VID = 0x0483;
+        private const ushort STM32_USB_SERIAL_PID = 0x5740;
         //private const byte PMD2_VID = 0xEE;
         //private const byte PMD2_PID = 0x0A;
 
